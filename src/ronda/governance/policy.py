@@ -23,7 +23,7 @@ from pydantic import (
 )
 
 from ronda.domain.event import TENANT_PATTERN
-from ronda.domain.incident import Contexto
+from ronda.domain.incident import TETO_RECORRENCIA, Contexto
 from ronda.domain.priority import Criticidade, Impacto, Prioridade, Urgencia
 from ronda.domain.taxonomy import Categoria
 
@@ -144,6 +144,20 @@ class RegrasUrgencia(_Estrito):
     modificadores: list[Modificador] = Field(default_factory=list)
 
 
+class RegrasCorrelacao(_Estrito):
+    janela: Duracao = Field(
+        default=timedelta(minutes=30),
+        description="Eventos da mesma chave com até este intervalo entre si formam um incidente",
+    )
+
+    @field_validator("janela")
+    @classmethod
+    def _janela_razoavel(cls, janela: timedelta) -> timedelta:
+        if not timedelta(minutes=1) <= janela <= timedelta(days=7):
+            raise ValueError("correlacao.janela precisa ficar entre 1min e 7d")
+        return janela
+
+
 class Politica(_Estrito):
     tenant: str = Field(pattern=TENANT_PATTERN)
     versao: int = Field(ge=1)
@@ -156,6 +170,20 @@ class Politica(_Estrito):
     urgencia: RegrasUrgencia = Field(default_factory=RegrasUrgencia)
     matriz: dict[Impacto, dict[Urgencia, Prioridade]]
     resposta: dict[Prioridade, Duracao] = Field(default_factory=dict)
+    correlacao: RegrasCorrelacao = Field(default_factory=RegrasCorrelacao)
+
+    @field_validator("urgencia")
+    @classmethod
+    def _recorrencia_abaixo_do_teto(cls, urgencia: RegrasUrgencia) -> RegrasUrgencia:
+        for modificador in urgencia.modificadores:
+            condicao = modificador._condicao
+            limiar = condicao.valor if condicao.campo == "recorrencia_24h" else None
+            if isinstance(limiar, int) and limiar > TETO_RECORRENCIA:
+                raise ValueError(
+                    f"modificador {modificador.se!r}: a recorrência satura em "
+                    f"{TETO_RECORRENCIA}; o limiar nunca seria atingido"
+                )
+        return urgencia
 
     @field_validator("ativos")
     @classmethod

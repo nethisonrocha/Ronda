@@ -47,6 +47,11 @@ matriz:           # impacto -> urgencia -> prioridade
   medio: {alta: P2, media: P3, baixa: P4}
   baixo: {alta: P3, media: P4, baixa: P4}
 
+correlacao:
+  # Eventos com a mesma origem, categoria e ativo, com até 30 min entre um e outro, viram um
+  # incidente só. Passada a janela sem evento novo, o incidente se encerra por inatividade.
+  janela: 30min
+
 resposta:         # P4 sem prazo: fica só no dashboard
   P1: 15min
   P2: 1h

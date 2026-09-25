@@ -6,6 +6,7 @@ mesma origem, categoria e ativo dentro de uma janela viram um único incidente.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from enum import StrEnum
 from uuid import UUID, uuid4
 
@@ -15,11 +16,21 @@ from ronda.domain.event import TENANT_PATTERN
 from ronda.domain.priority import Prioridade
 from ronda.domain.taxonomy import Categoria
 
+JANELA_RECORRENCIA = timedelta(hours=24)
+TETO_RECORRENCIA = 1000
+"""A recorrência satura aqui: contar além disso custaria caro (um incidente de varredura passa
+de 300 mil eventos) e nenhum modificador de política pode usar limiar maior."""
+
 
 class Contexto(BaseModel):
     """Fatos sobre a situação que os modificadores de urgência da política podem usar."""
 
-    recorrencia_24h: int = Field(default=0, ge=0, description="Eventos iguais nas últimas 24 h")
+    recorrencia_24h: int = Field(
+        default=0,
+        ge=0,
+        le=TETO_RECORRENCIA,
+        description="Eventos com a mesma chave nas últimas 24 h, saturando em TETO_RECORRENCIA",
+    )
     confirmado: bool = Field(default=False, description="Ataque confirmado pela fonte ou analista")
     fora_do_horario: bool = Field(default=False, description="Fora do expediente do tenant")
 

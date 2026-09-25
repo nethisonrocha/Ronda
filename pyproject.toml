@@ -31,6 +31,7 @@ notebooks = [
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.120",
     "pytest>=8.3",
     "ruff>=0.8",
     "testcontainers[postgres]>=4.9",

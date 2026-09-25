@@ -17,6 +17,7 @@ Cada tenant tem um arquivo `<tenant>.yaml`, versionado, no diretório definido p
 | `urgencia.modificadores` | não | Ajustes de urgência por contexto |
 | `matriz` | sim | Impacto → urgência → prioridade; as 9 células são obrigatórias |
 | `resposta` | não | Prazo por prioridade: `15min`, `1h`, `2d` |
+| `correlacao.janela` | não (`30min`) | Intervalo máximo entre eventos da mesma chave para ficarem no mesmo incidente (1min a 7d) |
 
 Categorias válidas: `comprometimento`, `ataque_web`, `negacao_servico`, `forca_bruta`,
 `reconhecimento`, `exfiltracao`, `benigno`, `desconhecido`. A taxonomia ainda é provisória;
@@ -39,6 +40,23 @@ vale a prioridade base da taxonomia, herdada do TCC: comprometimento e ataque_we
 negacao_servico é P2, forca_bruta e reconhecimento são P3, e benigno é P4. As categorias
 novas têm base provisória: exfiltracao é P1 e desconhecido é P3. O rastro diz o
 que faltou.
+
+## Correlação
+
+```yaml
+correlacao:
+  janela: 30min
+```
+
+Eventos com a mesma **origem, categoria e ativo** viram um incidente enquanto chegarem com até
+`janela` de intervalo entre si. Passada a janela sem evento novo, o incidente se encerra por
+inatividade. O ativo da chave é o do inventário; sem ele, o nome informado pela fonte e depois o
+IP. A prioridade do incidente é reavaliada quando ele nasce e quando a recorrência muda, e
+**nunca diminui** enquanto ele estiver aberto.
+
+A **recorrência** (`recorrencia_24h`) conta os eventos da mesma chave nas últimas 24 h, em
+qualquer incidente, e **satura em 1000**. Por isso a política recusa modificador com limiar maior
+que 1000.
 
 ## Modificadores
 
