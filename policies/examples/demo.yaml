@@ -1,0 +1,50 @@
+# Política do tenant de demonstração. É a política da especificação, completada
+# com as categorias que lá ficaram de fora (ataque_web, reconhecimento, benigno).
+tenant: demo
+versao: 3
+
+# Criticidade de um ativo que não está no inventário.
+criticidade_padrao: media
+
+ativos:
+  - nome: servidor-pagamentos
+    rede: 10.0.1.0/28
+    criticidade: alta
+  - nome: servidor-web
+    rede: 10.0.0.0/24
+    criticidade: media
+  - nome: ambiente-testes
+    rede: 10.0.9.0/24
+    criticidade: baixa
+
+impacto:          # categoria x criticidade do ativo
+  comprometimento: {alta: alto,  media: alto,  baixa: medio}
+  ataque_web:      {alta: alto,  media: medio, baixa: baixo}
+  negacao_servico: {alta: alto,  media: medio, baixa: baixo}
+  forca_bruta:     {alta: medio, media: baixo, baixa: baixo}
+  reconhecimento:  {alta: baixo, media: baixo, baixa: baixo}
+  benigno:         {alta: baixo, media: baixo, baixa: baixo}
+
+urgencia:
+  base:
+    comprometimento: alta
+    ataque_web: alta
+    negacao_servico: alta
+    forca_bruta: media
+    reconhecimento: baixa
+    benigno: baixa
+  modificadores:
+    - se: recorrencia_24h >= 5
+      subir: 1
+    - se: confirmado
+      subir: 1
+
+matriz:           # impacto -> urgencia -> prioridade
+  alto:  {alta: P1, media: P2, baixa: P3}
+  medio: {alta: P2, media: P3, baixa: P4}
+  baixo: {alta: P3, media: P4, baixa: P4}
+
+resposta:         # P4 sem prazo: fica só no dashboard
+  P1: 15min
+  P2: 1h
+  P3: 24h

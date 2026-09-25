@@ -1,0 +1,72 @@
+# Manifesto dos datasets. É a fonte única do que `make data` baixa.
+#
+# Cada arquivo tem url, sha256 e se deve ser descompactado em data/raw/<dataset>/.
+# Campos null ainda não foram conferidos: preencha a partir da página oficial antes de
+# usar o dataset. Com sha256 null, o script baixa, mostra o checksum calculado e avisa;
+# cole o valor aqui para travar a versão.
+#
+# download: automatico  → o script baixa pela url
+# download: manual      → exige cadastro ou acordo; o script só diz onde colocar o arquivo
+
+datasets:
+  ait-ads:
+    nome: AIT Alert Data Set (AIT-ADS)
+    uso: [governance-eval, translator]
+    pagina: null          # registro no Zenodo
+    versao: null
+    licenca: null         # conferir no Zenodo antes de redistribuir qualquer trecho
+    citacao: null
+    download: automatico
+    arquivos: []
+
+  cic-ids2017:
+    nome: CIC-IDS2017
+    uso: [detector]
+    pagina: https://www.unb.ca/cic/datasets/ids-2017.html
+    versao: null
+    licenca: null
+    citacao: >-
+      Sharafaldin, Lashkari e Ghorbani. Toward Generating a New Intrusion Detection
+      Dataset and Intrusion Traffic Characterization. ICISSP, 2018.
+    download: manual      # a UNB pede formulário antes de liberar o download
+    arquivos: []
+
+  cic-ids2017-improved:
+    nome: CIC-IDS2017 corrigido (Engelen et al.)
+    uso: [detector]
+    pagina: https://intrusion-detection.distrinet-research.be/WTMC2021/
+    versao: null
+    licenca: null
+    citacao: >-
+      Engelen, Rimmer e Joosen. Troubleshooting an Intrusion Detection Dataset: the
+      CICIDS2017 Case Study. IEEE SPW (WTMC), 2021.
+    download: automatico
+    arquivos: []
+
+  netflow-v3:
+    nome: NetFlow v3 (Universidade de Queensland)
+    uso: [detector]
+    pagina: https://staff.itee.uq.edu.au/marius/NIDS_datasets/
+    versao: v3
+    licenca: null         # uso comercial exige acordo com os autores
+    citacao: null
+    download: automatico
+    arquivos: []
+
+  bccc:
+    nome: BCCC
+    uso: [detector]
+    pagina: null
+    versao: null
+    licenca: null
+    citacao: null
+    download: automatico
+    arquivos: []
+
+# Exemplo de entrada de arquivo:
+#
+#   arquivos:
+#     - url: https://exemplo.org/dataset.zip
+#       nome: dataset.zip
+#       sha256: 3f5a…            # 64 caracteres hexadecimais
+#       descompactar: true

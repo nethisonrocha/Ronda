@@ -1,0 +1,41 @@
+[project]
+name = "ronda"
+version = "0.1.0"
+description = "Governança ITIL para alertas de segurança: prioridade P1–P4 configurável, rastro de decisão e alertas em português."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "pydantic>=2.9",
+    "pyyaml>=6.0",
+    "uvicorn[standard]>=0.32",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27",
+    "pytest>=8.3",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ronda"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["detector", "dashboard"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+# Textos em português usam "–", "×" e aspas tipográficas de propósito.
+ignore = ["RUF001", "RUF002", "RUF003"]

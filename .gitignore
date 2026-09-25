@@ -1,0 +1,29 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+.env
+
+# Datasets ficam fora do git; só o manifesto e as instruções entram.
+# Baixe com: make data (ou make data DATASET=ait-ads).
+data/*
+!data/README.md
+!data/datasets.yaml
+
+# Modelos do detector são baixados do HF Hub, nunca versionados.
+detector/models/*
+!detector/models/.gitkeep
+
+# Tráfego real nunca entra no repositório; só amostras anonimizadas em samples/.
+*.pcap
+*.pcapng
+!samples/**/*.pcap
+
+node_modules/
+.next/
+*.crt
