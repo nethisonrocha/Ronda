@@ -258,8 +258,11 @@ class AdaptadorWazuh:
             origem = "wazuh"
             classificacao = self.mapeamento.classificar_wazuh(regra_id, grupos)
             severidade = _inteiro(regra.get("level"))
-            ip_origem, ip_destino = _ip(dados.get("srcip")), _ip(dados.get("dstip"))
-            # O ativo do Wazuh é a máquina que gerou o log.
+            # O ativo do Wazuh é a máquina que gerou o log: sem `dstip`, o destino é o agente.
+            # Sem isso o inventário só achava o ativo pelo nome, e o AIT-ADS chama todos os
+            # agentes de "wazuh-client" (o `predecoder.hostname` falta em 60% dos alertas).
+            ip_origem = _ip(dados.get("srcip"))
+            ip_destino = _ip(dados.get("dstip")) or _ip(agente.get("ip"))
             ativo = predecoder.get("hostname") or agente.get("name")
 
         evidencias["mapeamento"] = {"via": classificacao.via.value, "chave": classificacao.chave}

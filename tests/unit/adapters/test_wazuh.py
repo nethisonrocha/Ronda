@@ -177,7 +177,7 @@ def test_wazuh_campos_do_evento(adaptador):
     assert evento.ocorrido_em == datetime(2022, 1, 21, 0, 2, 27, tzinfo=UTC)
     assert evento.severidade_origem == 5
     assert evento.ip_origem == ip_address("203.0.113.7")
-    assert evento.ip_destino is None
+    assert evento.ip_destino == ip_address("192.0.2.10")  # sem dstip, o destino é o agente
     assert evento.ativo == "mail"  # a máquina que gerou o log
     assert evento.evidencias["regra"]["mitre"] == ["T1110.001"]
     assert evento.evidencias["agente"] == {"id": "19", "name": "wazuh-client", "ip": "192.0.2.10"}
@@ -261,9 +261,15 @@ def test_envelope_do_indexador(adaptador):
     assert "_index" not in evento.bruto
 
 
+def test_dstip_vence_o_ip_do_agente(adaptador):
+    evento = um(adaptador, wazuh(data__dstip="198.51.100.9"))
+    assert evento.ip_destino == ip_address("198.51.100.9")
+
+
 def test_alerta_do_manager_sem_ip_de_agente(adaptador):
     evento = um(adaptador, wazuh(agent={"id": "000", "name": "wazuh.manager"}, predecoder=None))
     assert evento.ativo == "wazuh.manager"
+    assert evento.ip_destino is None
     assert evento.evidencias["agente"] == {"id": "000", "name": "wazuh.manager"}
 
 

@@ -7,10 +7,12 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
+from ronda.adapters.wazuh import AdaptadorWazuh
 from ronda.adapters.wazuh.adapter import horario_do_alerta, iterar_jsonl
 from ronda.api.deps import banco_de_dados, cliente_redis
 from ronda.api.main import app
-from ronda.governance.policy import RepositorioPoliticas
+from ronda.avaliacao import Simulador
+from ronda.governance.policy import RepositorioPoliticas, carregar_politica
 from ronda.replay import enviar_por_http, reproduzir
 from ronda.storage.repositories import RepositorioTokens
 from ronda.workers.ingestao import STREAM, WorkerIngestao
@@ -97,3 +99,32 @@ def test_ponta_a_ponta_trecho_do_russellmitchell(ambiente, redis_cliente, dono):
     assert contar(dono, "SELECT count(*) FROM decisoes WHERE jsonb_array_length(rastro) = 0") == 0
     assert contar(dono, "SELECT count(*) FROM eventos WHERE incidente_id IS NULL") == 0
     assert redis_cliente.xpending(STREAM, "ronda-ingestao")["pending"] == 0
+
+
+@pytest.mark.skipif(
+    not RUSSELLMITCHELL.exists(), reason="AIT-ADS não baixado (veja data/README.md)"
+)
+def test_simulador_da_avaliacao_decide_como_o_worker(banco, dono):
+    """A avaliação da fase 2 roda em memória; ela só vale se decidir como o pipeline com banco."""
+    politica = carregar_politica(POLITICAS_EXEMPLO / "demo.yaml")
+    pipeline = Pipeline(banco, RepositorioPoliticas(POLITICAS_EXEMPLO))
+    simulador = Simulador(politica)
+    adaptador = AdaptadorWazuh()
+    for alerta in islice(iterar_jsonl(RUSSELLMITCHELL), 2000):
+        evento = adaptador.converter_um(alerta, "demo")
+        if evento is not None:
+            pipeline.processar_evento(evento)
+            simulador.processar(evento)
+
+    with dono.connect() as conexao:
+        do_banco = sorted(
+            (chave, prioridade, total)
+            for chave, prioridade, total in conexao.execute(
+                text("SELECT chave_correlacao, prioridade, total_eventos FROM incidentes")
+            )
+        )
+    em_memoria = sorted(
+        (i.chave, i.prioridade.value, i.total) for i in simulador.incidentes.values()
+    )
+    assert em_memoria == do_banco
+    assert simulador.contagens.decisoes == contar(dono, "SELECT count(*) FROM decisoes")

@@ -1,0 +1,66 @@
+# Política da avaliação da fase 2 sobre os 8 cenários do AIT-ADS.
+#
+# A matriz, o impacto, a urgência e a correlação são os da política de demonstração, sem nenhum
+# ajuste: a avaliação mede a política como ela está, não uma versão afinada para o dataset.
+# O que muda é o que só existe por cenário:
+#
+# - `ativos` fica vazio aqui e é preenchido pelo notebook a partir do CSV de cada cenário
+#   (host → IP), com a criticidade por papel de `ronda.avaliacao.ait_ads.CRITICIDADE_POR_PAPEL`;
+# - o fuso é o do laboratório do AIT (Viena), para o horário de silêncio e o resumo diário.
+tenant: ait-ads
+versao: 1
+
+criticidade_padrao: media
+ativos: []
+
+impacto:
+  comprometimento: {alta: alto,  media: alto,  baixa: medio}
+  ataque_web:      {alta: alto,  media: medio, baixa: baixo}
+  negacao_servico: {alta: alto,  media: medio, baixa: baixo}
+  forca_bruta:     {alta: medio, media: baixo, baixa: baixo}
+  reconhecimento:  {alta: baixo, media: baixo, baixa: baixo}
+  exfiltracao:     {alta: alto,  media: alto,  baixa: medio}
+  benigno:         {alta: baixo, media: baixo, baixa: baixo}
+
+urgencia:
+  base:
+    comprometimento: alta
+    ataque_web: alta
+    negacao_servico: alta
+    forca_bruta: media
+    reconhecimento: baixa
+    exfiltracao: alta
+    benigno: baixa
+  modificadores:
+    - se: recorrencia_24h >= 5
+      subir: 1
+    - se: confirmado
+      subir: 1
+
+matriz:
+  alto:  {alta: P1, media: P2, baixa: P3}
+  medio: {alta: P2, media: P3, baixa: P4}
+  baixo: {alta: P3, media: P4, baixa: P4}
+
+correlacao:
+  janela: 30min
+
+notificacao:
+  canal: telegram
+  # Nunca lida: a avaliação envia para o canal falso.
+  destino_env: RONDA_TELEGRAM_CHAT_AVALIACAO
+  fuso: Europe/Vienna
+  modos:
+    P1: imediata
+    P2: agrupada
+    P3: resumo_diario
+    P4: nunca
+  agrupamento: 10min
+  silencio_por_origem: 30min
+  horario_silencio: {inicio: "22:00", fim: "07:00"}
+  resumo_diario: "08:00"
+
+resposta:
+  P1: 15min
+  P2: 1h
+  P3: 24h
