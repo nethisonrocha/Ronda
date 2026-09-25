@@ -16,6 +16,7 @@ correspondência vira `desconhecido`, e o caminho da decisão fica em
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections.abc import Iterator, Mapping
@@ -25,7 +26,7 @@ from importlib import resources
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from pathlib import Path
 from typing import Any, NamedTuple
-from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -134,6 +135,12 @@ class Mapeamento(_Estrito):
 # --- conversão ---------------------------------------------------------------------------
 
 _FUSO_SEM_DOIS_PONTOS = re.compile(r"([+-]\d{2})(\d{2})$")
+
+
+def horario_do_alerta(alerta: Mapping[str, Any]) -> datetime:
+    """Horário do alerta: `@timestamp` (indexador, AIT-ADS) ou `timestamp` (alerts.json)."""
+    alerta = desembrulhar(alerta)
+    return _horario(alerta.get("@timestamp") or alerta.get("timestamp"))
 
 
 def _horario(valor: Any) -> datetime:
@@ -259,7 +266,7 @@ class AdaptadorWazuh:
         id_origem = str(alerta["id"]) if alerta.get("id") else None
         try:
             return Evento(
-                id=self._id(tenant_id, origem, id_origem),
+                id=self._id(tenant_id, origem, id_origem, alerta),
                 tenant_id=tenant_id,
                 origem=origem,
                 id_origem=id_origem,
@@ -276,9 +283,12 @@ class AdaptadorWazuh:
             raise AlertaInvalido(f"alerta {id_origem or '?'} não virou evento: {erro}") from erro
 
     @staticmethod
-    def _id(tenant_id: str, origem: str, id_origem: str | None) -> UUID:
+    def _id(tenant_id: str, origem: str, id_origem: str | None, alerta: Mapping[str, Any]) -> UUID:
+        """Determinístico: pelo id do alerta na ferramenta ou, sem ele, pelo conteúdo. Assim a
+        reentrega da mesma mensagem pela fila nunca vira um segundo evento."""
         if id_origem is None:
-            return uuid4()
+            conteudo = json.dumps(alerta, sort_keys=True, ensure_ascii=False, default=str)
+            id_origem = "sha256:" + hashlib.sha256(conteudo.encode("utf-8")).hexdigest()
         return uuid5(NAMESPACE_RONDA, f"{tenant_id}|{origem}|{id_origem}")
 
 

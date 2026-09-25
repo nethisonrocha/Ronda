@@ -2,8 +2,8 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, inspect, text
 
-from ronda.storage.models import TABELAS_DE_TENANT, Base
-from tests.integration.storage.conftest import aplicar_migracoes, reverter_migracoes
+from ronda.storage.models import TABELAS_DE_TENANT, TABELAS_RLS_SEM_FORCE, Base
+from tests.integration.conftest import aplicar_migracoes, reverter_migracoes
 
 
 def test_modelos_e_migration_descrevem_o_mesmo_esquema(dono):
@@ -26,7 +26,10 @@ def test_rls_ligada_e_forcada_em_todas_as_tabelas(dono):
         ).scalars()
         assert set(politicas) == {"tenants", *TABELAS_DE_TENANT}
     assert len(linhas) == 1 + len(TABELAS_DE_TENANT)
-    assert all(ligada and forcada for _, ligada, forcada in linhas)
+    for tabela, ligada, forcada in linhas:
+        assert ligada, tabela
+        # tokens_ingestao é a exceção documentada: a função SECURITY DEFINER precisa ler.
+        assert forcada == (tabela not in TABELAS_RLS_SEM_FORCE), tabela
 
 
 def test_downgrade_ate_a_base_e_upgrade_de_novo(dono, esquema):

@@ -7,6 +7,8 @@ o que escapar. Gravar um objeto de outro tenant é erro antes mesmo de chegar ao
 
 from __future__ import annotations
 
+import hashlib
+import secrets
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Any
@@ -32,6 +34,7 @@ from ronda.storage.models import (
     IncidenteModel,
     NotificacaoModel,
     TenantModel,
+    TokenIngestaoModel,
 )
 
 
@@ -573,3 +576,62 @@ class RepositorioAuditoria(_Repositorio):
             EntradaAuditoria.model_validate(linha, from_attributes=True)
             for linha in self.sessao.scalars(consulta)
         ]
+
+
+# --- tokens de ingestão --------------------------------------------------------------------
+
+PREFIXO_TOKEN = "rnd_"
+
+
+def gerar_token() -> str:
+    """Token novo, com prefixo reconhecível (ajuda a achar vazamento em log e em repositório)."""
+    return PREFIXO_TOKEN + secrets.token_urlsafe(32)
+
+
+def hash_do_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+class TokenIngestao(BaseModel):
+    id: UUID
+    tenant_id: str
+    nome: str
+    criado_em: AwareDatetime
+    revogado_em: AwareDatetime | None
+
+
+class RepositorioTokens(_Repositorio):
+    """Tokens de ingestão do tenant. O token em claro só existe na resposta de `criar`."""
+
+    def criar(self, nome: str) -> tuple[str, TokenIngestao]:
+        token = gerar_token()
+        linha = TokenIngestaoModel(
+            tenant_id=self.tenant, id=uuid4(), nome=nome, hash=hash_do_token(token)
+        )
+        self.sessao.add(linha)
+        self.sessao.flush()
+        self.sessao.refresh(linha, ["criado_em"])
+        return token, TokenIngestao.model_validate(linha, from_attributes=True)
+
+    def listar(self) -> list[TokenIngestao]:
+        consulta = (
+            select(TokenIngestaoModel)
+            .where(TokenIngestaoModel.tenant_id == self.tenant)
+            .order_by(TokenIngestaoModel.criado_em)
+        )
+        return [
+            TokenIngestao.model_validate(linha, from_attributes=True)
+            for linha in self.sessao.scalars(consulta)
+        ]
+
+    def revogar(self, token_id: UUID, quando: datetime) -> bool:
+        resultado = self.sessao.execute(
+            update(TokenIngestaoModel)
+            .where(
+                TokenIngestaoModel.tenant_id == self.tenant,
+                TokenIngestaoModel.id == token_id,
+                TokenIngestaoModel.revogado_em.is_(None),
+            )
+            .values(revogado_em=quando)
+        )
+        return resultado.rowcount == 1

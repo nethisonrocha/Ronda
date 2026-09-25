@@ -240,5 +240,33 @@ class AuditoriaModel(Base):
     dados: Mapped[dict[str, Any]] = mapped_column(server_default=text("'{}'::jsonb"))
 
 
-TABELAS_DE_TENANT = ("eventos", "incidentes", "decisoes", "notificacoes", "auditoria")
+class TokenIngestaoModel(Base):
+    """Token de ingestão de um tenant; só o hash (sha256) é guardado.
+
+    Exceção à regra do FORCE: a RLS está ligada, mas não forçada, porque a função
+    ``ronda_tenant_do_token`` (SECURITY DEFINER, do dono) precisa achar o tenant pelo hash
+    antes de existir um tenant na sessão. O papel da aplicação continua sujeito à RLS.
+    """
+
+    __tablename__ = "tokens_ingestao"
+    __table_args__ = (Index("uq_tokens_ingestao_hash", "hash", unique=True),)
+
+    tenant_id: Mapped[str] = _tenant()
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    nome: Mapped[str] = mapped_column(Text)
+    hash: Mapped[str] = mapped_column(Text)
+    criado_em: Mapped[datetime] = _agora()
+    revogado_em: Mapped[datetime | None]
+
+
+TABELAS_DE_TENANT = (
+    "eventos",
+    "incidentes",
+    "decisoes",
+    "notificacoes",
+    "auditoria",
+    "tokens_ingestao",
+)
+# Tabelas com RLS ligada, mas sem FORCE (ver TokenIngestaoModel).
+TABELAS_RLS_SEM_FORCE = ("tokens_ingestao",)
 TABELAS_SOMENTE_INSERCAO = ("decisoes", "auditoria")

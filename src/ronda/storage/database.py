@@ -47,6 +47,19 @@ class BancoDeDados:
             sessao.info["tenant_id"] = tenant_id
             yield sessao
 
+    def tenant_do_token(self, token: str) -> str | None:
+        """Tenant dono de um token de ingestão ativo, ou None.
+
+        Roda fora de qualquer sessão de tenant: quem responde é a função SECURITY DEFINER
+        ``ronda_tenant_do_token``, que compara só o hash.
+        """
+        from ronda.storage.repositories import hash_do_token
+
+        with self.engine.connect() as conexao:
+            return conexao.execute(
+                text("SELECT ronda_tenant_do_token(:hash)"), {"hash": hash_do_token(token)}
+            ).scalar()
+
     def fechar(self) -> None:
         self.engine.dispose()
 

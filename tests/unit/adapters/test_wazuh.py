@@ -283,9 +283,12 @@ def test_mesmo_alerta_gera_o_mesmo_id_por_tenant(adaptador):
     assert um(adaptador, wazuh(), tenant="acme").id != a.id
 
 
-def test_alerta_sem_id_recebe_id_aleatorio(adaptador):
+def test_alerta_sem_id_recebe_id_pelo_conteudo(adaptador):
+    """Reentrega da mesma mensagem não pode virar dois eventos, mesmo sem id na ferramenta."""
     a, b = um(adaptador, wazuh(id=None)), um(adaptador, wazuh(id=None))
-    assert a.id != b.id and a.id_origem is None
+    assert a.id == b.id and a.id_origem is None
+    outro = um(adaptador, wazuh(id=None, full_log="outra linha"))
+    assert outro.id != a.id
 
 
 @pytest.mark.parametrize(

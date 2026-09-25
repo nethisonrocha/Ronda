@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from ronda import __version__
-from ronda.api.routes import eventos, politicas
+from ronda.api.routes import eventos, ingestao, politicas
 
 app = FastAPI(
     title="Ronda",
@@ -10,6 +10,7 @@ app = FastAPI(
 )
 app.include_router(eventos.router)
 app.include_router(politicas.router)
+app.include_router(ingestao.router)
 
 
 @app.get("/saude", tags=["operação"])
