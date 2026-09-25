@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Any
 from uuid import UUID, uuid4
@@ -21,7 +21,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ronda.domain.event import Evento
-from ronda.domain.incident import Contexto, EstadoIncidente, Incidente, chave_correlacao
+from ronda.domain.incident import (
+    JANELA_RECORRENCIA,
+    TETO_RECORRENCIA,
+    Contexto,
+    EstadoIncidente,
+    Incidente,
+    chave_correlacao,
+)
 from ronda.domain.notification import EstadoNotificacao, Notificacao
 from ronda.domain.priority import Prioridade
 from ronda.governance.engine import Decisao
@@ -248,6 +255,48 @@ class RepositorioIncidentes(_Repositorio):
             )
         )
         return True
+
+    def recorrencia(
+        self,
+        chave: str,
+        ate: datetime,
+        janela: timedelta = JANELA_RECORRENCIA,
+        teto: int = TETO_RECORRENCIA,
+    ) -> int:
+        """Eventos da chave em (ate − janela, ate], em qualquer incidente, saturando no teto.
+
+        O LIMIT dentro da subconsulta é o que torna o teto barato: o banco para de contar em
+        `teto`, em vez de varrer as centenas de milhares de eventos de uma varredura.
+        """
+        eventos_da_chave = (
+            select(EventoModel.id)
+            .join(
+                IncidenteModel,
+                (IncidenteModel.tenant_id == EventoModel.tenant_id)
+                & (IncidenteModel.id == EventoModel.incidente_id),
+            )
+            .where(
+                IncidenteModel.tenant_id == self.tenant,
+                IncidenteModel.chave_correlacao == chave,
+                EventoModel.ocorrido_em > ate - janela,
+                EventoModel.ocorrido_em <= ate,
+            )
+            .limit(teto)
+            .subquery()
+        )
+        return self.sessao.scalar(select(func.count()).select_from(eventos_da_chave)) or 0
+
+    def inativos(self, antes_de: datetime) -> list[Incidente]:
+        """Incidentes ainda ativos cujo último evento é anterior a `antes_de`."""
+        consulta = select(IncidenteModel).where(
+            IncidenteModel.tenant_id == self.tenant,
+            IncidenteModel.estado != EstadoIncidente.resolvido.value,
+            IncidenteModel.atualizado_em < antes_de,
+        )
+        return [self._para_dominio(linha) for linha in self.sessao.scalars(consulta)]
+
+    def atualizar_contexto(self, incidente_id: UUID, contexto: Contexto) -> None:
+        self._atualizar(incidente_id, {"contexto": contexto.model_dump(mode="json")})
 
     def atualizar_prioridade(
         self, incidente_id: UUID, prioridade: Prioridade, contexto: Contexto | None = None

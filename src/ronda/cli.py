@@ -62,7 +62,7 @@ def _replay(args: argparse.Namespace) -> int:
 def _worker(args: argparse.Namespace) -> int:
     from ronda.storage.database import BancoDeDados
     from ronda.workers.ingestao import WorkerIngestao
-    from ronda.workers.processadores import GravarEventos
+    from ronda.workers.pipeline import processador_do_pipeline
 
     configuracao = obter_configuracao()
     if configuracao.url_redis is None:
@@ -70,8 +70,13 @@ def _worker(args: argparse.Namespace) -> int:
         return 2
     cliente = redis.Redis.from_url(str(configuracao.url_redis), decode_responses=True)
     banco = BancoDeDados.da_configuracao(configuracao)
+    pipeline, depois_do_lote = processador_do_pipeline(banco, configuracao)
     worker = WorkerIngestao(
-        cliente, GravarEventos(banco), consumidor=args.consumidor, lote=args.lote
+        cliente,
+        pipeline,
+        consumidor=args.consumidor,
+        lote=args.lote,
+        depois_do_lote=depois_do_lote,
     )
     parar = threading.Event()
     try:
@@ -131,7 +136,7 @@ def construir_parser() -> argparse.ArgumentParser:
     replay.add_argument("--lote", type=int, default=500, help="máximo de alertas por requisição")
     replay.set_defaults(funcao=_replay)
 
-    worker = sub.add_parser("worker", help="consome a fila de ingestão e grava os eventos")
+    worker = sub.add_parser("worker", help="consome a fila de ingestão e roda o pipeline")
     worker.add_argument("--consumidor", help="nome no grupo (padrão: host-pid)")
     worker.add_argument("--lote", type=int, default=100)
     worker.set_defaults(funcao=_worker)

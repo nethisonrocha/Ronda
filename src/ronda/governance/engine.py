@@ -96,19 +96,23 @@ class Motor:
             rastro=rastro,
         )
 
-    def _resolver_ativo(self, evento: Evento, rastro: Rastro) -> tuple[Ativo | None, Criticidade]:
-        """Ordem: nome informado pela fonte, depois IP de destino, depois IP de origem."""
-        ativo: Ativo | None = None
-        via = ""
-        if evento.ativo and evento.ativo in self._por_nome:
-            ativo, via = self._por_nome[evento.ativo], "nome"
-        else:
-            for campo, ip in (("ip_destino", evento.ip_destino), ("ip_origem", evento.ip_origem)):
-                ativo = self._ativo_por_ip(ip)
-                if ativo:
-                    via = campo
-                    break
+    def ativo_do_inventario(self, evento: Evento) -> str | None:
+        """Nome do ativo do inventário que o evento atinge, ou None (usado na correlação)."""
+        ativo, _ = self._encontrar_ativo(evento)
+        return ativo.nome if ativo else None
 
+    def _encontrar_ativo(self, evento: Evento) -> tuple[Ativo | None, str]:
+        """Ordem: nome informado pela fonte, depois IP de destino, depois IP de origem."""
+        if evento.ativo and evento.ativo in self._por_nome:
+            return self._por_nome[evento.ativo], "nome"
+        for campo, ip in (("ip_destino", evento.ip_destino), ("ip_origem", evento.ip_origem)):
+            ativo = self._ativo_por_ip(ip)
+            if ativo:
+                return ativo, campo
+        return None, ""
+
+    def _resolver_ativo(self, evento: Evento, rastro: Rastro) -> tuple[Ativo | None, Criticidade]:
+        ativo, via = self._encontrar_ativo(evento)
         if ativo:
             rastro.registrar(
                 "ativo",

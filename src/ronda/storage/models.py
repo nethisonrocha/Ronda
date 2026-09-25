@@ -95,7 +95,12 @@ class EventoModel(Base):
             postgresql_where=text("id_origem IS NOT NULL"),
         ),
         Index("ix_eventos_tenant_id_ocorrido_em", "tenant_id", "ocorrido_em"),
-        Index("ix_eventos_tenant_id_incidente_id", "tenant_id", "incidente_id"),
+        Index(
+            "ix_eventos_tenant_id_incidente_id_ocorrido_em",
+            "tenant_id",
+            "incidente_id",
+            "ocorrido_em",
+        ),
     )
 
     tenant_id: Mapped[str] = _tenant()
@@ -129,6 +134,7 @@ class IncidenteModel(Base):
             postgresql_where=text("estado <> 'resolvido'"),
         ),
         Index("ix_incidentes_tenant_id_estado_prioridade", "tenant_id", "estado", "prioridade"),
+        Index("ix_incidentes_tenant_id_chave_correlacao", "tenant_id", "chave_correlacao"),
     )
 
     tenant_id: Mapped[str] = _tenant()
