@@ -47,7 +47,8 @@ def carregar_manifesto(caminho: Path = MANIFESTO) -> dict[str, dict[str, Any]]:
         if ds.get("download") not in ("automatico", "manual"):
             raise ErroDownload(f"{chave}: download precisa ser 'automatico' ou 'manual'")
         for arquivo in ds.get("arquivos") or []:
-            if not arquivo.get("nome") or "/" in arquivo["nome"] or "\\" in arquivo["nome"]:
+            nomes = [arquivo.get("nome"), *(arquivo.get("conteudo") or {})]
+            if not all(n and "/" not in n and "\\" not in n and n != ".." for n in nomes):
                 raise ErroDownload(f"{chave}: todo arquivo precisa de um nome simples")
     return datasets
 
@@ -71,25 +72,53 @@ def _dentro(base: Path, alvo: Path) -> bool:
     return alvo.resolve().is_relative_to(base.resolve())
 
 
-def descompactar(arquivo: Path, destino: Path) -> None:
-    """Extrai recusando caminhos que escapem de destino (zip slip)."""
+def descompactar(arquivo: Path, destino: Path, prefixo: str = "") -> None:
+    """Extrai recusando caminhos que escapem de destino (zip slip).
+
+    Com prefixo (ex. "alerts_csv/"), só os membros sob ele são extraídos, sem o prefixo.
+    """
     if zipfile.is_zipfile(arquivo):
         with zipfile.ZipFile(arquivo) as z:
-            for membro in z.namelist():
-                if not _dentro(destino, destino / membro):
-                    raise ErroDownload(f"{arquivo.name}: caminho inseguro {membro!r}")
-            z.extractall(destino)
+            for membro in z.infolist():
+                if not membro.filename.startswith(prefixo):
+                    continue
+                relativo = membro.filename[len(prefixo) :]
+                alvo = destino / relativo
+                if not relativo or not _dentro(destino, alvo):
+                    if relativo:
+                        raise ErroDownload(f"{arquivo.name}: caminho inseguro {membro.filename!r}")
+                    continue
+                if membro.is_dir():
+                    alvo.mkdir(parents=True, exist_ok=True)
+                    continue
+                alvo.parent.mkdir(parents=True, exist_ok=True)
+                with z.open(membro) as origem, alvo.open("wb") as saida:
+                    shutil.copyfileobj(origem, saida, length=1 << 20)
     elif tarfile.is_tarfile(arquivo):
+        if prefixo:
+            raise ErroDownload(f"{arquivo.name}: extrair_de só é suportado em zip")
         with tarfile.open(arquivo) as t:
             t.extractall(destino, filter="data")
     else:
         raise ErroDownload(f"{arquivo.name}: formato não reconhecido para descompactar")
 
 
+def conferir_conteudo(chave: str, pasta: Path, conteudo: dict[str, str]) -> list[str]:
+    """Nomes do conteúdo extraído ausentes ou com checksum diferente do manifesto."""
+    divergentes = []
+    for nome, esperado in conteudo.items():
+        caminho = pasta / nome
+        if not caminho.is_file() or sha256(caminho) != esperado.lower():
+            divergentes.append(nome)
+    return divergentes
+
+
 def obter_dataset(chave: str, ds: dict[str, Any], data: Path = DATA) -> list[str]:
-    """Garante os arquivos do dataset em data/raw/<chave>/. Devolve avisos."""
+    """Garante os arquivos do dataset em data/raw/<pasta ou chave>/. Devolve avisos."""
     avisos: list[str] = []
-    pasta = data / "raw" / chave
+    pasta = data / "raw" / ds.get("pasta", chave)
+    if not _dentro(data / "raw", pasta):
+        raise ErroDownload(f"{chave}: pasta fora de data/raw")
     pasta.mkdir(parents=True, exist_ok=True)
     arquivos = ds.get("arquivos") or []
 
@@ -99,6 +128,12 @@ def obter_dataset(chave: str, ds: dict[str, Any], data: Path = DATA) -> list[str
     for arquivo in arquivos:
         destino = pasta / arquivo["nome"]
         esperado = arquivo.get("sha256")
+        conteudo = arquivo.get("conteudo") or {}
+
+        # Conteúdo já extraído e conferido: não precisa do pacote.
+        if conteudo and not destino.exists() and not conferir_conteudo(chave, pasta, conteudo):
+            print(f"{chave}: {len(conteudo)} arquivo(s) de {arquivo['nome']} já conferidos")
+            continue
 
         if not destino.exists():
             if ds["download"] == "manual" or not arquivo.get("url"):
@@ -124,8 +159,15 @@ def obter_dataset(chave: str, ds: dict[str, Any], data: Path = DATA) -> list[str
         marcador = pasta / f".{arquivo['nome']}.extraido"
         if arquivo.get("descompactar") and not marcador.exists():
             print(f"{chave}: descompactando {arquivo['nome']}…")
-            descompactar(destino, pasta)
+            descompactar(destino, pasta, arquivo.get("extrair_de", ""))
             marcador.write_text(calculado, encoding="utf-8")
+
+        divergentes = conferir_conteudo(chave, pasta, conteudo)
+        if divergentes:
+            raise ErroDownload(
+                f"{chave}: conteúdo de {arquivo['nome']} ausente ou alterado: "
+                f"{', '.join(divergentes)}; raw/ é somente leitura, extraia de novo"
+            )
     return avisos
 
 

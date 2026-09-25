@@ -49,7 +49,8 @@ data/
 
 | Chave | Uso | Download | Licença |
 | --- | --- | --- | --- |
-| `ait-ads` | avaliação da governança, tradutor | automático | a conferir no Zenodo |
+| `ait-ads` | avaliação da governança, tradutor (JSON do Zenodo) | automático | a conferir no Zenodo |
+| `ait-ads-csv` | avaliação da governança (CSV do GitHub do AIT, em `raw/ait-ads/csv/`) | automático | GPL-3.0 (repositório) |
 | `cic-ids2017` | detector (base do TCC) | manual | a conferir |
 | `cic-ids2017-improved` | detector, versão corrigida | automático | a conferir |
 | `netflow-v3` | detector, generalização | automático | uso comercial exige acordo |

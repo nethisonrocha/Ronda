@@ -12,12 +12,45 @@ datasets:
   ait-ads:
     nome: AIT Alert Data Set (AIT-ADS)
     uso: [governance-eval, translator]
-    pagina: null          # registro no Zenodo
+    pagina: https://zenodo.org/record/8263181   # arquivo ait_ads.zip
     versao: null
     licenca: null         # conferir no Zenodo antes de redistribuir qualquer trecho
-    citacao: null
+    citacao: >-
+      Landauer, Skopik e Wurzenberger. Introducing a New Alert Data Set for Multi-Step
+      Attack Analysis. arXiv:2308.12627, 2023.
     download: automatico
+    # JSON (aminer e wazuh) em raw/ait-ads/json; os CSV são a fonte abaixo. Falta o sha256
+    # do ait_ads.zip (só os arquivos extraídos estão na máquina).
     arquivos: []
+
+  # Os alertas em CSV não vêm do zip do Zenodo, e sim do repositório do AIT no GitHub,
+  # fixado num commit. O zip do repositório traz a pasta alerts_csv/, que é extraída sem
+  # o prefixo em raw/ait-ads/csv/. Os oito arquivos locais foram conferidos em 25/09/2026
+  # contra o zip desse commit e são idênticos.
+  ait-ads-csv:
+    nome: AIT-ADS, alertas em CSV (repositório do AIT)
+    uso: [governance-eval]
+    pagina: https://github.com/ait-aecid/alert-data-set/tree/5459b57d1cc3ad359172c851104f4e6ed5d595d0/alerts_csv
+    versao: commit 5459b57 (2024-03-25)
+    licenca: GPL-3.0      # licença do repositório no GitHub; pode diferir da do Zenodo
+    citacao: null
+    pasta: ait-ads/csv
+    download: automatico
+    arquivos:
+      - url: https://raw.githubusercontent.com/ait-aecid/alert-data-set/5459b57d1cc3ad359172c851104f4e6ed5d595d0/alerts_csv/alerts_csv.zip
+        nome: alerts_csv.zip
+        sha256: 2bf1a81527a3fe15d92079a7834c9d77c5305546e15569657d2097d6294825c3
+        descompactar: true
+        extrair_de: alerts_csv/
+        conteudo:         # sha256 de cada arquivo extraído
+          fox_alerts.txt: 62a64013c665c42e2f1ad4f4c745e6e23990deec709b4bde467c28a0ed942de5
+          harrison_alerts.txt: 51bf1419247aa7252518a0ca61540154de6c1f7931aa7cfeb4e3d6e76a2a6f3e
+          russellmitchell_alerts.txt: 633fd686667a166a56355bc5d6d902ccf81a74f5ef557793b1fcd9a9edacee19
+          santos_alerts.txt: cce927fee9ae3109c68d7b2e72e4c8b8c2ee8594adb1da81b91dc08bcb139f4d
+          shaw_alerts.txt: 7e8f68ee56b79a0174cd56afbb2c474443693ea2430516d7c0b745ba534f94ea
+          wardbeck_alerts.txt: e2413b345215627d2e053bfe78b04c96109f051a317c6d1fcd981720dcfd500d
+          wheeler_alerts.txt: 18f632ffddbee98cefcaab7bf66329e628fdfa79166a79d6c4858bc531265d5c
+          wilson_alerts.txt: 5361cc462e5804313780ffc82c48f9b5fd59e47bf4230bac3c611d24d00b08cd
 
   cic-ids2017:
     nome: CIC-IDS2017
@@ -70,3 +103,8 @@ datasets:
 #       nome: dataset.zip
 #       sha256: 3f5a…            # 64 caracteres hexadecimais
 #       descompactar: true
+#       extrair_de: pasta/       # opcional: extrai só o que está sob este prefixo, sem ele
+#       conteudo:                # opcional: sha256 de cada arquivo extraído
+#         a.csv: 9b1c…
+#
+# `pasta` no dataset (opcional) troca o destino padrão data/raw/<chave>/.
