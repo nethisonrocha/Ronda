@@ -19,7 +19,8 @@ Cada tenant tem um arquivo `<tenant>.yaml`, versionado, no diretório definido p
 | `resposta` | não | Prazo por prioridade: `15min`, `1h`, `2d` |
 
 Categorias válidas: `comprometimento`, `ataque_web`, `negacao_servico`, `forca_bruta`,
-`reconhecimento`, `benigno`.
+`reconhecimento`, `exfiltracao`, `benigno`, `desconhecido`. A taxonomia ainda é provisória;
+veja [exploracao-ait-ads.md](exploracao-ait-ads.md) e [pendencias.md](pendencias.md).
 
 ## Como o motor decide
 
@@ -35,7 +36,8 @@ Categorias válidas: `comprometimento`, `ataque_web`, `negacao_servico`, `forca_
 
 **Categoria sem regra.** Se a categoria não tiver linha em `impacto` ou em `urgencia.base`,
 vale a prioridade base da taxonomia, herdada do TCC: comprometimento e ataque_web são P1,
-negacao_servico é P2, forca_bruta e reconhecimento são P3, e benigno é P4. O rastro diz o
+negacao_servico é P2, forca_bruta e reconhecimento são P3, e benigno é P4. As categorias
+novas têm base provisória: exfiltracao é P1 e desconhecido é P3. O rastro diz o
 que faltou.
 
 ## Modificadores

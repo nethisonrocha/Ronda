@@ -1,0 +1,94 @@
+# Mapeamento de alertas do Wazuh (e do Suricata lido pelo Wazuh) para as categorias do Ronda.
+#
+# GERADO por scripts/gerar_mapeamento_wazuh.py a partir de docs/taxonomia-rascunho.csv.
+# Não edite à mão: mude a taxonomia (ou as regras genéricas no gerador) e gere de novo.
+#
+# Ordem de decisão no adaptador:
+#   Wazuh:    descartar → wazuh.regras (exata) → wazuh.grupos (primeiro que casar)
+#   Suricata: suricata.assinaturas (exata) → suricata.familias_et → suricata.categorias
+#   Sem nenhuma correspondência: desconhecido.
+#
+# A taxonomia ainda é provisória (T6 em docs/pendencias.md).
+
+versao: 1
+taxonomia: provisoria
+descartar:
+  regras_fastlog:
+  - '20100'
+  - '20101'
+  - '20151'
+  - '20152'
+  - '20161'
+  - '20162'
+wazuh:
+  regras:
+    '2501': forca_bruta
+    '5304': comprometimento
+    '5402': comprometimento
+    '5403': comprometimento
+    '5501': benigno
+    '5502': benigno
+    '5503': forca_bruta
+    '5551': forca_bruta
+    '5706': reconhecimento
+    '5715': benigno
+    '9701': benigno
+    '9705': forca_bruta
+    '9751': forca_bruta
+    '30305': reconhecimento
+    '30306': reconhecimento
+    '31101': reconhecimento
+    '31104': ataque_web
+    '31122': desconhecido
+    '31151': reconhecimento
+    '31509': forca_bruta
+    '31516': ataque_web
+    '52507': benigno
+    '80730': desconhecido
+  grupos:
+  - grupo: sudo
+    categoria: comprometimento
+  - grupo: su
+    categoria: comprometimento
+  - grupo: authentication_failed
+    categoria: forca_bruta
+  - grupo: authentication_failures
+    categoria: forca_bruta
+  - grupo: invalid_login
+    categoria: forca_bruta
+  - grupo: web_scan
+    categoria: reconhecimento
+  - grupo: recon
+    categoria: reconhecimento
+  - grupo: access_denied
+    categoria: reconhecimento
+  - grupo: attack
+    categoria: ataque_web
+  - grupo: authentication_success
+    categoria: benigno
+suricata:
+  assinaturas:
+    ET DNS Query for .to TLD: desconhecido
+    ET INFO DNS Query for Suspicious .ga Domain: desconhecido
+    ET INFO Observed DNS Query to .biz TLD: exfiltracao
+    ET INFO Observed DNS Query to .cloud TLD: desconhecido
+    ET INFO Suspicious Domain (*.ga) in TLS SNI: desconhecido
+    ET POLICY GNU/Linux APT User-Agent Outbound likely related to package management: benigno
+    ET SCAN Possible Nmap User-Agent Observed: reconhecimento
+    SURICATA HTTP gzip decompression failed: desconhecido
+    SURICATA HTTP invalid response chunk len: desconhecido
+    SURICATA HTTP unable to match response to request: desconhecido
+    SURICATA SMTP invalid reply: desconhecido
+    SURICATA SMTP no server welcome message: desconhecido
+    SURICATA TLS invalid SSLv2 header: desconhecido
+    SURICATA TLS invalid handshake message: desconhecido
+    SURICATA TLS invalid record type: desconhecido
+    SURICATA TLS invalid record/traffic: desconhecido
+  familias_et:
+    POLICY: benigno
+    SCAN: reconhecimento
+  categorias:
+    Generic Protocol Command Decode: desconhecido
+    Not Suspicious Traffic: benigno
+    Potentially Bad Traffic: desconhecido
+    Web Application Attack: ataque_web

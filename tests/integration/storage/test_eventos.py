@@ -7,6 +7,7 @@ INICIO = datetime(2026, 9, 25, 14, 0, tzinfo=UTC)
 
 def test_evento_completo_volta_igual(banco, evento):
     original = evento(
+        id_origem="1685715378.241",
         severidade_origem=10,
         ip_origem="203.0.113.7",
         ip_destino="2001:db8::5",
@@ -15,7 +16,7 @@ def test_evento_completo_volta_igual(banco, evento):
         bruto={"rule": {"id": "5712", "level": 10}, "agent": {"name": "web01"}},
     )
     with banco.sessao("demo") as sessao:
-        assert RepositorioEventos(sessao).registrar(original, id_origem="1685715378.241")
+        assert RepositorioEventos(sessao).registrar(original)
 
     with banco.sessao("demo") as sessao:
         assert RepositorioEventos(sessao).obter(original.id) == original
@@ -72,3 +73,11 @@ def test_listar_por_periodo_em_ordem(banco, evento):
     assert [e.ocorrido_em for e in todos] == sorted(e.ocorrido_em for e in eventos)
     assert [e.ocorrido_em.minute for e in janela] == [10, 20]
     assert [e.ocorrido_em.minute for e in primeiros] == [0, 10]
+
+
+def test_id_origem_do_proprio_evento_segura_a_duplicata(banco, evento):
+    with banco.sessao("demo") as sessao:
+        repositorio = RepositorioEventos(sessao)
+        assert repositorio.registrar(evento(id_origem="w-1")) is True
+        assert repositorio.registrar(evento(id_origem="w-1")) is False
+        assert [e.id_origem for e in repositorio.listar()] == ["w-1"]

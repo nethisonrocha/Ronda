@@ -15,7 +15,10 @@ class Categoria(StrEnum):
     negacao_servico = "negacao_servico"
     forca_bruta = "forca_bruta"
     reconhecimento = "reconhecimento"
+    exfiltracao = "exfiltracao"
     benigno = "benigno"
+    desconhecido = "desconhecido"
+    """Sem regra de mapeamento, ou alerta sem semântica de ataque (anomalia de protocolo)."""
 
 
 # Prioridade herdada do TCC. Vale quando a política do tenant não tem regra para
@@ -27,4 +30,8 @@ PRIORIDADE_BASE: dict[Categoria, Prioridade] = {
     Categoria.forca_bruta: Prioridade.P3,
     Categoria.reconhecimento: Prioridade.P3,
     Categoria.benigno: Prioridade.P4,
+    # Provisórias (docs/pendencias.md, T5): exfiltração como comprometimento; desconhecido no
+    # meio da escala, para entrar no resumo diário sem acordar ninguém.
+    Categoria.exfiltracao: Prioridade.P1,
+    Categoria.desconhecido: Prioridade.P3,
 }

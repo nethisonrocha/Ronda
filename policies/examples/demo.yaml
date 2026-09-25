@@ -1,5 +1,6 @@
 # Política do tenant de demonstração. É a política da especificação, completada
-# com as categorias que lá ficaram de fora (ataque_web, reconhecimento, benigno).
+# com as categorias que lá ficaram de fora (ataque_web, reconhecimento, exfiltracao, benigno).
+# `desconhecido` fica sem regra de propósito: vale a prioridade base da taxonomia (P3).
 tenant: demo
 versao: 3
 
@@ -23,6 +24,7 @@ impacto:          # categoria x criticidade do ativo
   negacao_servico: {alta: alto,  media: medio, baixa: baixo}
   forca_bruta:     {alta: medio, media: baixo, baixa: baixo}
   reconhecimento:  {alta: baixo, media: baixo, baixa: baixo}
+  exfiltracao:     {alta: alto,  media: alto,  baixa: medio}
   benigno:         {alta: baixo, media: baixo, baixa: baixo}
 
 urgencia:
@@ -32,6 +34,7 @@ urgencia:
     negacao_servico: alta
     forca_bruta: media
     reconhecimento: baixa
+    exfiltracao: alta
     benigno: baixa
   modificadores:
     - se: recorrencia_24h >= 5

@@ -80,10 +80,11 @@ class RepositorioEventos(_Repositorio):
     def registrar(self, evento: Evento, id_origem: str | None = None) -> bool:
         """Grava o evento. Devolve False se ele já existia (mesmo id ou mesmo id_origem).
 
-        Com `id_origem` (o id do alerta na ferramenta), a ingestão é idempotente: a mesma
-        mensagem entregue duas vezes pela fila não vira dois eventos.
+        Com `id_origem` (o id do alerta na ferramenta; por padrão, o do próprio evento), a
+        ingestão é idempotente: a mesma mensagem entregue duas vezes não vira dois eventos.
         """
         self._mesmo_tenant(evento.tenant_id)
+        id_origem = id_origem or evento.id_origem
         json = evento.model_dump(mode="json", include={"severidade_origem", "evidencias", "bruto"})
         # RETURNING, e não rowcount: pelo ORM, o rowcount de um INSERT não é confiável.
         inserido = self.sessao.execute(
@@ -144,6 +145,7 @@ class RepositorioEventos(_Repositorio):
             id=linha.id,
             tenant_id=linha.tenant_id,
             origem=linha.origem,
+            id_origem=linha.id_origem,
             categoria=linha.categoria,
             severidade_origem=linha.severidade_origem,
             ip_origem=_ip(linha.ip_origem),

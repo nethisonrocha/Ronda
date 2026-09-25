@@ -18,6 +18,9 @@ class Evento(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     tenant_id: str = Field(pattern=TENANT_PATTERN)
     origem: str = Field(min_length=1, description="Ferramenta que gerou o alerta")
+    id_origem: str | None = Field(
+        default=None, description="Id do alerta na ferramenta; torna a ingestão idempotente"
+    )
     categoria: Categoria
     severidade_origem: int | str | None = Field(
         default=None, description="Severidade como a fonte reportou"
