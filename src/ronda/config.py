@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
-from pydantic import AnyUrl, Field, PostgresDsn, RedisDsn
+from pydantic import AnyUrl, Field, PostgresDsn, RedisDsn, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Ambiente = Literal["desenvolvimento", "teste", "producao"]
@@ -53,6 +53,17 @@ class Configuracao(BaseSettings):
         description="Redis das filas (Redis Streams)",
     )
 
+    telegram_token: SecretStr | None = Field(
+        default=None,
+        validation_alias="RONDA_TELEGRAM_TOKEN",
+        description="Token do bot do Ronda (não é o bot do Paperclip)",
+    )
+
+    @field_validator("telegram_token", mode="before")
+    @classmethod
+    def _vazio_e_ausente(cls, valor: object) -> object:
+        return None if isinstance(valor, str) and not valor.strip() else valor
+
     def resumo(self) -> dict[str, str | None]:
         """Configuração pronta para log, com as senhas mascaradas."""
         return {
@@ -61,6 +72,7 @@ class Configuracao(BaseSettings):
             "url_banco": mascarar(self.url_banco),
             "url_banco_migracao": mascarar(self.url_banco_migracao),
             "url_redis": mascarar(self.url_redis),
+            "telegram_token": "***" if self.telegram_token else None,
         }
 
 

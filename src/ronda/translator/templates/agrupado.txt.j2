@@ -1,0 +1,10 @@
+{{ emoji }} {{ itens | length }} incidentes {{ prioridade }} de {{ origem }} nos últimos {{ janela }}
+
+{% for item in itens %}
+- {{ item.titulo }} · {{ item.ativo }} · {{ item.eventos }} evento{{ "s" if item.eventos != 1 else "" }}
+{% endfor %}
+
+Ação sugerida
+{{ acao }}
+
+{{ tenant }}

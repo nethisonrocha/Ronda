@@ -1,1 +1,1 @@
-"""Notificações com política anti-fadiga (fase 2)."""
+"""Notificações com política anti-fadiga: roteador, resumo diário, canais e serviço."""

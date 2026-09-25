@@ -1,0 +1,13 @@
+📋 Resumo diário · {{ data }}
+{{ itens | length }} incidente{{ "s" if itens | length != 1 else "" }} {{ prioridade }} desde o último resumo
+
+{% for grupo in grupos %}
+{{ grupo.titulo }} ({{ grupo.itens | length }})
+{% for item in grupo.itens %}
+- {{ item.ativo }} · {{ item.eventos }} evento{{ "s" if item.eventos != 1 else "" }}
+{% endfor %}
+
+{% endfor %}
+Nada aqui exige ação imediata; vale revisar a política se algo se repete todo dia.
+
+{{ tenant }}

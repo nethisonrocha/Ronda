@@ -52,6 +52,21 @@ correlacao:
   # incidente só. Passada a janela sem evento novo, o incidente se encerra por inatividade.
   janela: 30min
 
+notificacao:
+  canal: telegram
+  # Nome da variável de ambiente com o chat id do Telegram; o valor fica no .env, nunca aqui.
+  destino_env: RONDA_TELEGRAM_CHAT_DEMO
+  fuso: America/Fortaleza
+  modos:            # P1 fura o horário de silêncio; P4 fica só no dashboard
+    P1: imediata
+    P2: agrupada
+    P3: resumo_diario
+    P4: nunca
+  agrupamento: 10min          # P2 da mesma origem numa janela vira uma mensagem só
+  silencio_por_origem: 30min  # mesma origem, categoria e ativo: não repete no mesmo nível
+  horario_silencio: {inicio: "22:00", fim: "07:00"}
+  resumo_diario: "08:00"
+
 resposta:         # P4 sem prazo: fica só no dashboard
   P1: 15min
   P2: 1h

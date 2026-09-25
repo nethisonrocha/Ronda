@@ -119,6 +119,7 @@ class WorkerIngestao:
         ocioso_ms: int = 60_000,
         max_entregas: int = 5,
         depois_do_lote: Callable[[], None] | None = None,
+        a_cada_volta: Callable[[], object] | None = None,
     ) -> None:
         self.cliente = cliente
         self.processar = processar
@@ -127,6 +128,8 @@ class WorkerIngestao:
         self.lote, self.bloquear_ms = lote, bloquear_ms
         self.ocioso_ms, self.max_entregas = ocioso_ms, max_entregas
         self.depois_do_lote = depois_do_lote
+        self.a_cada_volta = a_cada_volta
+        """Roda a cada volta do laço, com ou sem mensagem (ex.: despachar notificações)."""
 
     def garantir_grupo(self) -> None:
         try:
@@ -164,6 +167,8 @@ class WorkerIngestao:
         while not parar.is_set():
             try:
                 self.processar_lote()
+                if self.a_cada_volta:
+                    self.a_cada_volta()
             except redis.ConnectionError as erro:
                 log.warning("Redis indisponível (%s); tentando de novo", erro)
                 parar.wait(2)

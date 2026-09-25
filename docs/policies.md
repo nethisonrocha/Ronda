@@ -17,6 +17,7 @@ Cada tenant tem um arquivo `<tenant>.yaml`, versionado, no diretório definido p
 | `urgencia.modificadores` | não | Ajustes de urgência por contexto |
 | `matriz` | sim | Impacto → urgência → prioridade; as 9 células são obrigatórias |
 | `resposta` | não | Prazo por prioridade: `15min`, `1h`, `2d` |
+| `notificacao` | não | Política anti-fadiga (abaixo); sem o bloco, o tenant não recebe notificação |
 | `correlacao.janela` | não (`30min`) | Intervalo máximo entre eventos da mesma chave para ficarem no mesmo incidente (1min a 7d) |
 
 Categorias válidas: `comprometimento`, `ataque_web`, `negacao_servico`, `forca_bruta`,
@@ -57,6 +58,32 @@ IP. A prioridade do incidente é reavaliada quando ele nasce e quando a recorrê
 A **recorrência** (`recorrencia_24h`) conta os eventos da mesma chave nas últimas 24 h, em
 qualquer incidente, e **satura em 1000**. Por isso a política recusa modificador com limiar maior
 que 1000.
+
+## Notificação
+
+```yaml
+notificacao:
+  canal: telegram
+  destino_env: RONDA_TELEGRAM_CHAT_DEMO   # o chat id fica no .env, nunca no YAML
+  fuso: America/Fortaleza
+  modos: {P1: imediata, P2: agrupada, P3: resumo_diario, P4: nunca}
+  agrupamento: 10min
+  silencio_por_origem: 30min
+  horario_silencio: {inicio: "22:00", fim: "07:00"}
+  resumo_diario: "08:00"
+```
+
+| Regra | O que faz |
+| --- | --- |
+| `modos` | O que cada prioridade dispara; o que faltar vem do padrão acima. P1 não pode ser `nunca` |
+| `agrupamento` | P2 da mesma origem (ferramenta) esperam a janela e saem numa mensagem só |
+| `silencio_por_origem` | Depois de notificar uma chave (origem, categoria e ativo), um incidente novo dela no mesmo nível ou abaixo é registrado como suprimido; subir de nível sempre notifica |
+| `horario_silencio` | Nada sai, exceto o P1; o resto espera o fim do horário. Pode atravessar a meia-noite |
+| `resumo_diario` | Os P3 pendentes saem numa mensagem por dia, neste horário, no fuso do tenant |
+
+Toda notificação fica registrada, inclusive a suprimida, com o motivo. As mensagens trazem o que
+houve, por que a prioridade (o rastro do motor) e a ação sugerida, e têm um botão **Reconhecer**
+que registra o tempo até o reconhecimento.
 
 ## Modificadores
 

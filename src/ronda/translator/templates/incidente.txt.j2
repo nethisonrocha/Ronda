@@ -1,0 +1,16 @@
+{{ emoji }} {{ prioridade }} · {{ titulo }}
+{{ ativo }}{% if prazo %} · resposta em {{ prazo }}{% endif %}
+
+
+O que houve
+{{ o_que_houve }}
+
+Por que {{ prioridade }}
+{% for passo in porque %}
+- {{ passo }}
+{% endfor %}
+
+Ação sugerida
+{{ acao }}
+
+Incidente {{ incidente_curto }} · {{ tenant }}

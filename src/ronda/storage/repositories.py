@@ -546,6 +546,52 @@ class RepositorioNotificacoes(_Repositorio):
         )
         return resultado.rowcount == 1
 
+    def mais_grave_da_chave(self, chave: str, desde: datetime) -> Notificacao | None:
+        """A notificação não suprimida mais grave, desde `desde`, de qualquer incidente da chave
+        (a "origem" do silêncio por origem). Entre as de mesma prioridade, a mais recente."""
+        consulta = (
+            select(NotificacaoModel)
+            .join(
+                IncidenteModel,
+                (IncidenteModel.tenant_id == NotificacaoModel.tenant_id)
+                & (IncidenteModel.id == NotificacaoModel.incidente_id),
+            )
+            .where(
+                NotificacaoModel.tenant_id == self.tenant,
+                IncidenteModel.chave_correlacao == chave,
+                NotificacaoModel.estado != EstadoNotificacao.suprimida.value,
+                NotificacaoModel.criada_em >= desde,
+            )
+            .order_by(
+                NotificacaoModel.prioridade.asc(),  # "P1" < "P2" < …: a mais grave primeiro
+                NotificacaoModel.criada_em.desc(),
+                NotificacaoModel.id.desc(),
+            )
+            .limit(1)
+        )
+        linha = self.sessao.scalars(consulta).one_or_none()
+        return None if linha is None else self._para_dominio(linha)
+
+    def ultimo_envio(self, modo: str) -> datetime | None:
+        return self.sessao.scalar(
+            select(func.max(NotificacaoModel.enviada_em)).where(
+                NotificacaoModel.tenant_id == self.tenant,
+                NotificacaoModel.modo == modo,
+                NotificacaoModel.estado == EstadoNotificacao.enviada.value,
+            )
+        )
+
+    def da_mesma_mensagem(self, notificacao: Notificacao) -> list[Notificacao]:
+        """Todas as notificações que saíram na mesma mensagem (agrupada ou resumo)."""
+        if notificacao.id_externo is None:
+            return [notificacao]
+        consulta = select(NotificacaoModel).where(
+            NotificacaoModel.tenant_id == self.tenant,
+            NotificacaoModel.id_externo == notificacao.id_externo,
+            NotificacaoModel.destino == notificacao.destino,
+        )
+        return [self._para_dominio(linha) for linha in self.sessao.scalars(consulta)]
+
     def do_incidente(self, incidente_id: UUID) -> list[Notificacao]:
         consulta = (
             select(NotificacaoModel)

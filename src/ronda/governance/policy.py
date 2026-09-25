@@ -5,9 +5,11 @@ from __future__ import annotations
 import operator
 import re
 from collections.abc import Callable
+from datetime import time as hora
 from datetime import timedelta
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 from pydantic import (
@@ -158,6 +160,74 @@ class RegrasCorrelacao(_Estrito):
         return janela
 
 
+ModoDaPolitica = Literal["imediata", "agrupada", "resumo_diario", "nunca"]
+MODOS_PADRAO: dict[Prioridade, ModoDaPolitica] = {
+    Prioridade.P1: "imediata",
+    Prioridade.P2: "agrupada",
+    Prioridade.P3: "resumo_diario",
+    Prioridade.P4: "nunca",
+}
+
+
+def _ler_hora(valor: Any) -> Any:
+    if isinstance(valor, str) and re.fullmatch(r"\d{1,2}:\d{2}", valor.strip()):
+        h, m = valor.strip().split(":")
+        return hora(int(h), int(m))
+    return valor
+
+
+Hora = Annotated[hora, BeforeValidator(_ler_hora)]
+
+
+class HorarioSilencio(_Estrito):
+    inicio: Hora
+    fim: Hora
+    """Pode atravessar a meia-noite (22:00 → 07:00)."""
+
+
+class RegrasNotificacao(_Estrito):
+    """Política anti-fadiga do tenant. O P1 é o único que fura o horário de silêncio."""
+
+    canal: Literal["telegram"] = "telegram"
+    destino_env: str = Field(
+        pattern=r"^[A-Z][A-Z0-9_]*$",
+        description="Variável de ambiente com o destino (o chat id); o valor nunca vai para o YAML",
+    )
+    fuso: str = "America/Fortaleza"
+    modos: dict[Prioridade, ModoDaPolitica] = Field(default_factory=lambda: dict(MODOS_PADRAO))
+    agrupamento: Duracao = Field(default=timedelta(minutes=10), description="Janela do P2 agrupado")
+    silencio_por_origem: Duracao = Field(
+        default=timedelta(minutes=30),
+        description="Depois de notificar uma origem (mesma origem, categoria e ativo), não repete "
+        "no mesmo nível durante este tempo",
+    )
+    horario_silencio: HorarioSilencio | None = None
+    resumo_diario: Hora = hora(8, 0)
+
+    @field_validator("fuso")
+    @classmethod
+    def _fuso_existe(cls, fuso: str) -> str:
+        try:
+            ZoneInfo(fuso)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError(f"fuso desconhecido: {fuso!r}") from None
+        return fuso
+
+    @field_validator("modos")
+    @classmethod
+    def _modos_completos(
+        cls, modos: dict[Prioridade, ModoDaPolitica]
+    ) -> dict[Prioridade, ModoDaPolitica]:
+        completos = dict(MODOS_PADRAO) | modos
+        if completos[Prioridade.P1] == "nunca":
+            raise ValueError("notificacao.modos: P1 não pode ser 'nunca'")
+        return completos
+
+    @property
+    def zona(self) -> ZoneInfo:
+        return ZoneInfo(self.fuso)
+
+
 class Politica(_Estrito):
     tenant: str = Field(pattern=TENANT_PATTERN)
     versao: int = Field(ge=1)
@@ -171,6 +241,8 @@ class Politica(_Estrito):
     matriz: dict[Impacto, dict[Urgencia, Prioridade]]
     resposta: dict[Prioridade, Duracao] = Field(default_factory=dict)
     correlacao: RegrasCorrelacao = Field(default_factory=RegrasCorrelacao)
+    notificacao: RegrasNotificacao | None = None
+    """Sem o bloco, o tenant não recebe notificação (o dashboard continua mostrando tudo)."""
 
     @field_validator("urgencia")
     @classmethod
@@ -247,6 +319,12 @@ class RepositorioPoliticas:
     def __init__(self, diretorio: Path) -> None:
         self.diretorio = diretorio
         self._cache: dict[str, tuple[int, Politica]] = {}
+
+    def tenants(self) -> list[str]:
+        """Tenants com arquivo de política no diretório (nome do arquivo válido)."""
+        return sorted(
+            c.stem for c in self.diretorio.glob("*.yaml") if re.fullmatch(TENANT_PATTERN, c.stem)
+        )
 
     def obter(self, tenant: str) -> Politica:
         if not re.match(TENANT_PATTERN, tenant):

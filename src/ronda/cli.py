@@ -2,6 +2,7 @@
 
     ronda replay --cenario russellmitchell --velocidade 60
     ronda worker
+    ronda telegram
     ronda token criar --tenant demo --nome wazuh-vps
     ronda token listar --tenant demo
     ronda token revogar --tenant demo --id <uuid>
@@ -70,17 +71,56 @@ def _worker(args: argparse.Namespace) -> int:
         return 2
     cliente = redis.Redis.from_url(str(configuracao.url_redis), decode_responses=True)
     banco = BancoDeDados.da_configuracao(configuracao)
-    pipeline, depois_do_lote = processador_do_pipeline(banco, configuracao)
+    notificador = _notificador(banco, configuracao)
+    pipeline, depois_do_lote = processador_do_pipeline(
+        banco, configuracao, ao_priorizar=notificador.ao_priorizar
+    )
     worker = WorkerIngestao(
         cliente,
         pipeline,
         consumidor=args.consumidor,
         lote=args.lote,
         depois_do_lote=depois_do_lote,
+        a_cada_volta=notificador.despachar_se_devido,
     )
     parar = threading.Event()
     try:
         worker.rodar(parar)
+    except KeyboardInterrupt:
+        parar.set()
+    finally:
+        banco.fechar()
+    return 0
+
+
+def _notificador(banco, configuracao):
+    from ronda.governance.policy import RepositorioPoliticas
+    from ronda.notifier.channels.telegram import CanalTelegram
+    from ronda.notifier.service import Notificador
+
+    canais = {}
+    if configuracao.telegram_token is not None:
+        canais["telegram"] = CanalTelegram(configuracao.telegram_token.get_secret_value())
+    else:
+        logging.getLogger("ronda").warning(
+            "RONDA_TELEGRAM_TOKEN ausente: notificações ficam pendentes"
+        )
+    return Notificador(banco, RepositorioPoliticas(configuracao.diretorio_politicas), canais)
+
+
+def _telegram(args: argparse.Namespace) -> int:
+    from ronda.notifier.service import rodar_poller
+    from ronda.storage.database import BancoDeDados
+
+    configuracao = obter_configuracao()
+    if configuracao.telegram_token is None:
+        print("defina RONDA_TELEGRAM_TOKEN", file=sys.stderr)
+        return 2
+    banco = BancoDeDados.da_configuracao(configuracao)
+    notificador = _notificador(banco, configuracao)
+    parar = threading.Event()
+    try:
+        rodar_poller(notificador.canais["telegram"], notificador, parar)
     except KeyboardInterrupt:
         parar.set()
     finally:
@@ -140,6 +180,9 @@ def construir_parser() -> argparse.ArgumentParser:
     worker.add_argument("--consumidor", help="nome no grupo (padrão: host-pid)")
     worker.add_argument("--lote", type=int, default=100)
     worker.set_defaults(funcao=_worker)
+
+    telegram = sub.add_parser("telegram", help="recebe os cliques em Reconhecer (long polling)")
+    telegram.set_defaults(funcao=_telegram)
 
     token = sub.add_parser("token", help="tokens de ingestão por tenant")
     token.add_argument("acao", choices=["criar", "listar", "revogar"])
