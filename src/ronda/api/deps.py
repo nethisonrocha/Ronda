@@ -4,7 +4,7 @@ from functools import lru_cache
 
 from fastapi import HTTPException
 
-from ronda.config import carregar_config
+from ronda.config import obter_configuracao
 from ronda.governance.policy import (
     Politica,
     PoliticaInvalida,
@@ -15,7 +15,7 @@ from ronda.governance.policy import (
 
 @lru_cache
 def repositorio_politicas() -> RepositorioPoliticas:
-    return RepositorioPoliticas(carregar_config().policies_dir)
+    return RepositorioPoliticas(obter_configuracao().diretorio_politicas)
 
 
 def obter_politica(repositorio: RepositorioPoliticas, tenant: str) -> Politica:

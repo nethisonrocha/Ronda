@@ -1,9 +1,10 @@
 UV ?= uv
+COMPOSE ?= docker compose -f deploy/compose/dev.yml --env-file .env
 
-.PHONY: sync test lint format api data
+.PHONY: sync test lint format api data up down ps logs reset
 
 sync:
-	$(UV) sync
+	$(UV) sync --all-extras
 
 test:
 	$(UV) run pytest
@@ -23,4 +24,19 @@ api:
 data:
 	$(UV) run python scripts/download_data.py $(if $(DATASET),--dataset $(DATASET))
 
-# make up e make demo entram junto com deploy/compose (fase 2) e o modo replay (fase 3).
+# Ambiente local: PostgreSQL e Redis (deploy/compose/dev.yml). Requer o .env (veja .env.example).
+up:
+	$(COMPOSE) up -d --wait
+
+down:
+	$(COMPOSE) down
+
+ps:
+	$(COMPOSE) ps
+
+logs:
+	$(COMPOSE) logs -f --tail=100
+
+# Apaga os volumes: banco e Redis voltam vazios no próximo `make up`.
+reset:
+	$(COMPOSE) down -v

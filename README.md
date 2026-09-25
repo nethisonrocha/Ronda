@@ -50,6 +50,10 @@ uv run uvicorn ronda.api.main:app --reload   # http://127.0.0.1:8000/docs
 
 Com `make`: `make test`, `make lint`, `make api`.
 
+PostgreSQL e Redis locais, a partir da fase 2: copie `.env.example` para `.env`, troque as
+senhas e rode `make up` (derrube com `make down`). Detalhes e comandos sem `make` estão no
+[CLAUDE.md](CLAUDE.md#ambiente-local-postgresql-e-redis).
+
 ```sh
 curl -s localhost:8000/eventos/avaliar -H 'content-type: application/json' -d '{
   "evento": {"tenant_id": "demo", "origem": "wazuh", "categoria": "negacao_servico",

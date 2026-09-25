@@ -1,16 +1,84 @@
-"""Configuração lida do ambiente (veja .env.example)."""
+"""Configuração do Ronda, lida de variáveis de ambiente e do arquivo .env (veja .env.example).
+
+Variáveis de ambiente têm precedência sobre o .env. As URLs com senha não aparecem no repr
+nem nas mensagens de erro; para registrar a configuração em log, use `Configuracao.resumo()`.
+"""
 
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
+from typing import Literal
+from urllib.parse import urlsplit, urlunsplit
+
+from pydantic import AnyUrl, Field, PostgresDsn, RedisDsn
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+Ambiente = Literal["desenvolvimento", "teste", "producao"]
 
 
-@dataclass(frozen=True)
-class Config:
-    policies_dir: Path
+class Configuracao(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        # O .env também guarda variáveis do compose (RONDA_PG_PASSWORD etc.).
+        extra="ignore",
+        frozen=True,
+        populate_by_name=True,
+        hide_input_in_errors=True,
+    )
+
+    ambiente: Ambiente = Field(default="desenvolvimento", validation_alias="RONDA_ENV")
+    diretorio_politicas: Path = Field(
+        default=Path("policies/examples"),
+        validation_alias="RONDA_POLICIES_DIR",
+        description="Diretório com um arquivo <tenant>.yaml por organização",
+    )
+    url_banco: PostgresDsn | None = Field(
+        default=None,
+        validation_alias="RONDA_DATABASE_URL",
+        repr=False,
+        description="Conexão da aplicação: papel sem privilégios, sujeito à RLS",
+    )
+    url_banco_migracao: PostgresDsn | None = Field(
+        default=None,
+        validation_alias="RONDA_DATABASE_MIGRATION_URL",
+        repr=False,
+        description="Conexão das migrations: papel dono das tabelas",
+    )
+    url_redis: RedisDsn | None = Field(
+        default=None,
+        validation_alias="RONDA_REDIS_URL",
+        repr=False,
+        description="Redis das filas (Redis Streams)",
+    )
+
+    def resumo(self) -> dict[str, str | None]:
+        """Configuração pronta para log, com as senhas mascaradas."""
+        return {
+            "ambiente": self.ambiente,
+            "diretorio_politicas": str(self.diretorio_politicas),
+            "url_banco": mascarar(self.url_banco),
+            "url_banco_migracao": mascarar(self.url_banco_migracao),
+            "url_redis": mascarar(self.url_redis),
+        }
 
 
-def carregar_config() -> Config:
-    return Config(policies_dir=Path(os.environ.get("RONDA_POLICIES_DIR", "policies/examples")))
+def mascarar(url: AnyUrl | None) -> str | None:
+    """Troca a senha da URL por ***; o resto fica legível."""
+    if url is None:
+        return None
+    partes = urlsplit(str(url))
+    if partes.password is None:
+        return str(url)
+    usuario = partes.username or ""
+    endereco = partes.hostname or ""
+    if partes.port is not None:
+        endereco = f"{endereco}:{partes.port}"
+    return urlunsplit(partes._replace(netloc=f"{usuario}:***@{endereco}"))
+
+
+@lru_cache
+def obter_configuracao() -> Configuracao:
+    """Configuração do processo, lida uma vez."""
+    return Configuracao()
