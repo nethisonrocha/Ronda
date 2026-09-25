@@ -1,0 +1,45 @@
+ferramenta,assinatura,grupos_ou_categoria,fase_dominante,classificacao,categoria_proposta
+suricata,ET POLICY GNU/Linux APT User-Agent Outbound likely related to package management,Not Suspicious Traffic,-,só ruído,benigno
+suricata,ET DNS Query for .to TLD,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET INFO DNS Query for Suspicious .ga Domain,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET INFO Observed DNS Query to .cloud TLD,Potentially Bad Traffic,dnsteal,ambos,desconhecido
+suricata,ET INFO Suspicious Domain (*.ga) in TLS SNI,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,SURICATA HTTP gzip decompression failed,Generic Protocol Command Decode,-,só ruído,desconhecido
+suricata,SURICATA HTTP invalid response chunk len,Generic Protocol Command Decode,service_scans,ambos,desconhecido
+suricata,SURICATA HTTP unable to match response to request,Generic Protocol Command Decode,cracking,ambos,desconhecido
+suricata,SURICATA SMTP invalid reply,Generic Protocol Command Decode,service_scans,só em ataques,desconhecido
+suricata,SURICATA SMTP no server welcome message,Generic Protocol Command Decode,service_scans,só em ataques,desconhecido
+suricata,SURICATA TLS invalid SSLv2 header,Generic Protocol Command Decode,service_scans,só em ataques,desconhecido
+suricata,SURICATA TLS invalid handshake message,Generic Protocol Command Decode,cracking,ambos,desconhecido
+suricata,SURICATA TLS invalid record type,Generic Protocol Command Decode,wpscan,só em ataques,desconhecido
+suricata,SURICATA TLS invalid record/traffic,Generic Protocol Command Decode,cracking,ambos,desconhecido
+suricata,ET INFO Observed DNS Query to .biz TLD,Potentially Bad Traffic,-,só ruído,exfiltracao
+suricata,ET SCAN Possible Nmap User-Agent Observed,Web Application Attack,service_scans,só em ataques,reconhecimento
+wazuh,31104 Common web attack.,web|accesslog|attack,dirb,só em ataques,ataque_web
+wazuh,31516 Suspicious URL access.,web|appsec|attack,dirb,só em ataques,ataque_web
+wazuh,52507 ClamAV database update,clamd|freshclam|virus,dnsteal,ambos,benigno
+wazuh,5501 PAM: Login session opened.,pam|syslog|authentication_success,privilege_escalation,ambos,benigno
+wazuh,5502 PAM: Login session closed.,pam|syslog,privilege_escalation,ambos,benigno
+wazuh,5715 sshd: authentication success.,syslog|sshd|authentication_success,-,só ruído,benigno
+wazuh,9701 Dovecot Authentication Success.,dovecot|authentication_success,dnsteal,ambos,benigno
+wazuh,5304 User successfully changed UID.,syslog|su|authentication_success,privilege_escalation,só em ataques,comprometimento
+wazuh,5402 Successful sudo to ROOT executed.,syslog|sudo,privilege_escalation,ambos,comprometimento
+wazuh,5403 First time user executed sudo.,syslog|sudo,-,só ruído,comprometimento
+wazuh,31122 Web server 500 error code (Internal Error).,web|accesslog|system_error,wpscan,ambos,desconhecido
+wazuh,80730 Auditd: SELinux permission check.,audit|audit_selinux,-,só ruído,desconhecido
+wazuh,2501 syslog: User authentication failure.,syslog|access_control|authentication_failed,cracking,ambos,forca_bruta
+wazuh,31509 CMS (WordPress or Joomla) login attempt.,web|appsec|attack,dnsteal,ambos,forca_bruta
+wazuh,5503 PAM: User login failed.,pam|syslog|authentication_failed,cracking,ambos,forca_bruta
+wazuh,5551 PAM: Multiple failed logins in a small period of time.,pam|syslog|authentication_failures,-,só ruído,forca_bruta
+wazuh,9705 Dovecot Invalid User Login Attempt.,dovecot|invalid_login|authentication_failed,cracking,ambos,forca_bruta
+wazuh,9751 Dovecot brute force attack (multiple auth failures).,dovecot|authentication_failures,-,só ruído,forca_bruta
+wazuh,30305 Apache: Attempt to access forbidden file or directory.,apache|web|access_denied,dirb,só em ataques,reconhecimento
+wazuh,30306 Apache: Attempt to access forbidden directory index.,apache|web|access_denied,dirb,só em ataques,reconhecimento
+wazuh,31101 Web server 400 error code.,web|accesslog|attack,dirb,ambos,reconhecimento
+wazuh,31151 Multiple web server 400 error codes from same source ip.,web|accesslog|web_scan|recon,dirb,só em ataques,reconhecimento
+wazuh,5706 sshd: insecure connection attempt (scan).,syslog|sshd|recon,service_scans,só em ataques,reconhecimento
+wazuh_fastlog,20100 First time this IDS alert is generated.,ids|fts,-,duplicata,-
+wazuh_fastlog,20101 IDS event.,ids,-,duplicata,-
+wazuh_fastlog,20151 Multiple IDS events from same source ip.,ids,-,duplicata,-
+wazuh_fastlog,20152 Multiple IDS alerts for same id.,ids,-,duplicata,-
+wazuh_fastlog,20162 Multiple IDS alerts for same id (ignoring now this id).,ids,-,duplicata,-
