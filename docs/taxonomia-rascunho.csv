@@ -5,15 +5,15 @@ suricata,ET INFO DNS Query for Suspicious .ga Domain,Potentially Bad Traffic,-,s
 suricata,ET INFO Observed DNS Query to .cloud TLD,Potentially Bad Traffic,dnsteal,ambos,desconhecido
 suricata,ET INFO Suspicious Domain (*.ga) in TLS SNI,Potentially Bad Traffic,-,só ruído,desconhecido
 suricata,SURICATA HTTP gzip decompression failed,Generic Protocol Command Decode,-,só ruído,desconhecido
-suricata,SURICATA HTTP invalid response chunk len,Generic Protocol Command Decode,service_scans,ambos,desconhecido
+suricata,SURICATA HTTP invalid response chunk len,Generic Protocol Command Decode,service_scans,ambos,reconhecimento
 suricata,SURICATA HTTP unable to match response to request,Generic Protocol Command Decode,cracking,ambos,desconhecido
-suricata,SURICATA SMTP invalid reply,Generic Protocol Command Decode,service_scans,só em ataques,desconhecido
-suricata,SURICATA SMTP no server welcome message,Generic Protocol Command Decode,service_scans,só em ataques,desconhecido
-suricata,SURICATA TLS invalid SSLv2 header,Generic Protocol Command Decode,service_scans,só em ataques,desconhecido
+suricata,SURICATA SMTP invalid reply,Generic Protocol Command Decode,service_scans,só em ataques,reconhecimento
+suricata,SURICATA SMTP no server welcome message,Generic Protocol Command Decode,service_scans,só em ataques,reconhecimento
+suricata,SURICATA TLS invalid SSLv2 header,Generic Protocol Command Decode,service_scans,só em ataques,reconhecimento
 suricata,SURICATA TLS invalid handshake message,Generic Protocol Command Decode,cracking,ambos,desconhecido
 suricata,SURICATA TLS invalid record type,Generic Protocol Command Decode,wpscan,só em ataques,desconhecido
 suricata,SURICATA TLS invalid record/traffic,Generic Protocol Command Decode,cracking,ambos,desconhecido
-suricata,ET INFO Observed DNS Query to .biz TLD,Potentially Bad Traffic,-,só ruído,exfiltracao
+suricata,ET INFO Observed DNS Query to .biz TLD,Potentially Bad Traffic,-,só ruído,desconhecido
 suricata,ET SCAN Possible Nmap User-Agent Observed,Web Application Attack,service_scans,só em ataques,reconhecimento
 wazuh,31104 Common web attack.,web|accesslog|attack,dirb,só em ataques,ataque_web
 wazuh,31516 Suspicious URL access.,web|appsec|attack,dirb,só em ataques,ataque_web
@@ -43,3 +43,17 @@ wazuh_fastlog,20101 IDS event.,ids,-,duplicata,-
 wazuh_fastlog,20151 Multiple IDS events from same source ip.,ids,-,duplicata,-
 wazuh_fastlog,20152 Multiple IDS alerts for same id.,ids,-,duplicata,-
 wazuh_fastlog,20162 Multiple IDS alerts for same id (ignoring now this id).,ids,-,duplicata,-
+wazuh,31510 CMS (WordPress or Joomla) brute force attempt.,web|appsec|attack,wpscan,só em ataques,forca_bruta
+suricata,ET DNS Query for .cc TLD,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET DNS Query to a *.pw domain - Likely Hostile,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET DNS Query for .su TLD (Soviet Union) Often Malware Related,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET DNS DNS Lookup for localhost.DOMAIN.TLD,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET HUNTING Possible COVID-19 Domain in SSL Certificate M2,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET HUNTING Suspicious Domain Request for Possible COVID-19 Domain M1,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET HUNTING Suspicious TLS SNI Request for Possible COVID-19 Domain M1,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET INFO TLS Handshake Failure,Potentially Bad Traffic,-,só ruído,desconhecido
+suricata,ET INFO Session Traversal Utilities for NAT (STUN Binding Request),Attempted User Privilege Gain,-,só ruído,desconhecido
+suricata,ET INFO Session Traversal Utilities for NAT (STUN Binding Response),Attempted User Privilege Gain,-,só ruído,desconhecido
+suricata,SURICATA TLS certificate invalid der,Generic Protocol Command Decode,-,só ruído,desconhecido
+suricata,SURICATA DNS Unsolicited response,-,-,só ruído,desconhecido
+suricata,ET SCAN Behavioral Unusual Port 445 traffic Potential Scan or Infection,Misc activity,-,só ruído,reconhecimento

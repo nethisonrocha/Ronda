@@ -60,7 +60,7 @@ def test_silencio_por_origem_suprime_mesmo_nivel_e_abaixo_mas_deixa_subir():
     mesmo = classificar(REGRAS, Prioridade.P2, anterior, dez_min)
     abaixo = classificar(REGRAS, Prioridade.P3, anterior, dez_min)
     acima = classificar(REGRAS, Prioridade.P1, anterior, dez_min)
-    depois = classificar(REGRAS, Prioridade.P2, anterior, MEIO_DIA_LOCAL + timedelta(minutes=31))
+    depois = classificar(REGRAS, Prioridade.P2, anterior, MEIO_DIA_LOCAL + timedelta(hours=2))
 
     assert mesmo.estado is EstadoNotificacao.suprimida
     assert mesmo.motivo == "silêncio por origem: P2 da mesma origem notificado há 10 min"

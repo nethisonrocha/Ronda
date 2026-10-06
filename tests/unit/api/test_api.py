@@ -47,7 +47,7 @@ def test_avaliar_evento(cliente):
 def test_avaliar_com_contexto(cliente):
     evento = EVENTO | {"categoria": "forca_bruta"}
     corpo = cliente.post(
-        "/eventos/avaliar", json={"evento": evento, "contexto": {"recorrencia_24h": 7}}
+        "/eventos/avaliar", json={"evento": evento, "contexto": {"recorrencia_24h": 50}}
     ).json()
     assert corpo["prioridade"] == "P2"
 
@@ -74,7 +74,7 @@ def test_politica_quebrada_no_servidor_da_500(tmp_path):
 
 def test_ler_politica(cliente):
     corpo = cliente.get("/politicas/demo").json()
-    assert corpo["versao"] == 3
+    assert corpo["versao"] == 4
     assert corpo["resposta"]["P1"] == "PT15M"
 
 

@@ -34,8 +34,10 @@ def test_exemplo_da_especificacao_mesmo_dos_contra_ambiente_de_testes(politica_d
 @pytest.mark.parametrize(
     ("categoria", "ip", "esperado"),
     [
-        ("comprometimento", PAGAMENTOS, Prioridade.P1),
-        ("comprometimento", TESTES, Prioridade.P2),
+        # Sem contexto, comprometimento não chega a P1 (A5): o sudo de rotina e o da escalada
+        # são o mesmo alerta.
+        ("comprometimento", PAGAMENTOS, Prioridade.P2),
+        ("comprometimento", TESTES, Prioridade.P3),
         ("ataque_web", WEB, Prioridade.P2),
         ("negacao_servico", WEB, Prioridade.P2),
         ("forca_bruta", PAGAMENTOS, Prioridade.P3),
@@ -54,18 +56,36 @@ def test_recorrencia_sobe_a_urgencia(politica_demo, evento):
     motor = Motor(politica_demo)
     forca_bruta = evento(categoria="forca_bruta", ip_destino=PAGAMENTOS)
 
-    sem = motor.avaliar(forca_bruta, Contexto(recorrencia_24h=4))
-    com = motor.avaliar(forca_bruta, Contexto(recorrencia_24h=5))
+    # Força bruta tem limiar próprio (A1): 5 falhas por dia é usuário errando a senha.
+    sem = motor.avaliar(forca_bruta, Contexto(recorrencia_24h=49))
+    com = motor.avaliar(forca_bruta, Contexto(recorrencia_24h=50))
 
     assert (sem.urgencia, sem.prioridade) == (Urgencia.media, Prioridade.P3)
     assert (com.urgencia, com.prioridade) == (Urgencia.alta, Prioridade.P2)
-    assert "recorrencia_24h >= 5: urgência sobe para alta" in com.rastro.resumo
+    assert "recorrencia_24h >= 50 (só forca_bruta): urgência sobe para alta" in com.rastro.resumo
+    assert "recorrencia_24h >= 5" not in sem.rastro.resumo  # o limiar geral não vale para ela
+
+
+@pytest.mark.parametrize(
+    ("contexto", "esperado"),
+    [
+        (Contexto(), Prioridade.P2),
+        (Contexto(recorrencia_24h=9), Prioridade.P2),  # repetir sudo não é sinal de ataque
+        (Contexto(fora_do_horario=True), Prioridade.P1),
+        (Contexto(ataque_previo_no_ativo=True), Prioridade.P1),
+    ],
+)
+def test_comprometimento_so_vira_p1_com_contexto(politica_demo, evento, contexto, esperado):
+    decisao = Motor(politica_demo).avaliar(
+        evento(categoria="comprometimento", ip_destino=PAGAMENTOS), contexto
+    )
+    assert decisao.prioridade is esperado
 
 
 def test_modificador_no_teto_fica_registrado_sem_efeito(politica_demo, evento):
     decisao = Motor(politica_demo).avaliar(
         evento(categoria="forca_bruta", ip_destino=PAGAMENTOS),
-        Contexto(recorrencia_24h=9, confirmado=True),
+        Contexto(recorrencia_24h=50, confirmado=True),
     )
     assert decisao.urgencia is Urgencia.alta
     assert "confirmado: urgência já em alta, sem efeito" in decisao.rastro.resumo

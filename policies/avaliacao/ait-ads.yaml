@@ -8,7 +8,7 @@
 #   (host → IP), com a criticidade por papel de `ronda.avaliacao.ait_ads.CRITICIDADE_POR_PAPEL`;
 # - o fuso é o do laboratório do AIT (Viena), para o horário de silêncio e o resumo diário.
 tenant: ait-ads
-versao: 1
+versao: 2
 
 criticidade_padrao: media
 ativos: []
@@ -24,7 +24,10 @@ impacto:
 
 urgencia:
   base:
-    comprometimento: alta
+    # Comprometimento parte de média: o sudo de rotina e o da escalada são o mesmo alerta, e
+    # só o contexto separa os dois (decisão A5 de 06/10/2026). Sobe para alta fora do
+    # expediente ou depois de outro incidente grave no mesmo ativo.
+    comprometimento: media
     ataque_web: alta
     negacao_servico: alta
     forca_bruta: media
@@ -34,6 +37,18 @@ urgencia:
   modificadores:
     - se: recorrencia_24h >= 5
       subir: 1
+      exceto: [forca_bruta, comprometimento]
+    # Usuário errando a senha passa de 5 falhas em 24 h todo dia; na avaliação, nenhum limiar
+    # separou o erro comum do ataque, e 50 deixou 19 incidentes de ruído (A1).
+    - se: recorrencia_24h >= 50
+      subir: 1
+      categorias: [forca_bruta]
+    - se: fora_do_horario
+      subir: 1
+      categorias: [comprometimento]
+    - se: ataque_previo_no_ativo
+      subir: 1
+      categorias: [comprometimento]
     - se: confirmado
       subir: 1
 
@@ -41,6 +56,12 @@ matriz:
   alto:  {alta: P1, media: P2, baixa: P3}
   medio: {alta: P2, media: P3, baixa: P4}
   baixo: {alta: P3, media: P4, baixa: P4}
+
+expediente:       # fora dele, o contexto marca fora_do_horario
+  fuso: Europe/Vienna
+  dias: [seg, ter, qua, qui, sex]
+  inicio: "08:00"
+  fim: "18:00"
 
 correlacao:
   janela: 30min
@@ -56,7 +77,7 @@ notificacao:
     P3: resumo_diario
     P4: nunca
   agrupamento: 10min
-  silencio_por_origem: 30min
+  silencio_por_origem: 2h
   horario_silencio: {inicio: "22:00", fim: "07:00"}
   resumo_diario: "08:00"
 

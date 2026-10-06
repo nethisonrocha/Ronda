@@ -21,7 +21,7 @@ T0 = datetime(2022, 1, 21, 10, 0, tzinfo=UTC)
 POLITICA = carregar_politica(POLITICAS_EXEMPLO / "demo.yaml")
 
 
-def cenario(categoria="forca_bruta", recorrencia=7, **evidencias):
+def cenario(categoria="forca_bruta", recorrencia=50, **evidencias):
     evento = Evento(
         tenant_id="demo",
         origem="wazuh",
@@ -54,10 +54,11 @@ def test_mensagem_do_incidente_tem_as_tres_partes_e_o_rastro():
     texto = mensagem_incidente(incidente, decisao, evento)
     assert texto.startswith("🟠 P2 · Tentativas de senha (força bruta)")
     assert "servidor-pagamentos · resposta em 1 h" in texto
-    assert "O que houve\n7 eventos de wazuh em 12 min" in texto
+    assert "O que houve\n50 eventos de wazuh em 12 min" in texto
     assert "Último alerta: sshd: authentication failed." in texto
     assert "Por que P2\n" in texto
-    assert "- recorrencia_24h >= 5: urgência sobe para alta" in texto  # o rastro vira a explicação
+    # O rastro vira a explicação.
+    assert "- recorrencia_24h >= 50 (só forca_bruta): urgência sobe para alta" in texto
     assert "Ação sugerida\nBloqueie o IP de origem" in texto
 
 
@@ -81,5 +82,21 @@ def test_agrupada_e_resumo():
     assert agrupada.startswith("🟠 2 incidentes P2 de wazuh nos últimos 10 min")
     assert "- Tentativas de senha (força bruta) · web · 1 evento\n" in agrupada
     resumo = resumo_diario("demo", T0, Prioridade.P3, [incidente, outro])
-    assert "2 incidentes P3 desde o último resumo" in resumo
-    assert "Tentativas de senha (força bruta) (2)" in resumo
+    assert (
+        f"2 incidentes P3 desde o último resumo ({incidente.total_eventos + 1} eventos)" in resumo
+    )
+    assert "Tentativas de senha (força bruta): 2 incidentes em 2 ativos" in resumo
+    assert "mais frequentes: servidor-pagamentos (1), web (1)" in resumo
+
+
+def test_resumo_conta_por_categoria_em_vez_de_listar():
+    """229 P3 num resumo não cabiam na mensagem (A4): o resumo agora só conta."""
+    incidente, _, _ = cenario()
+    muitos = [
+        incidente.model_copy(update={"ativo": f"10.0.0.{i % 40}", "total_eventos": 2})
+        for i in range(500)
+    ]
+    resumo = resumo_diario("demo", T0, Prioridade.P3, muitos)
+    assert tamanho_telegram(resumo) < 1000
+    assert "500 incidentes em 40 ativos, 1000 eventos" in resumo
+    assert resumo.count("10.0.0.") == 3  # só os mais frequentes

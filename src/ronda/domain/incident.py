@@ -17,6 +17,7 @@ from ronda.domain.priority import Prioridade
 from ronda.domain.taxonomy import Categoria
 
 JANELA_RECORRENCIA = timedelta(hours=24)
+JANELA_ATAQUE_PREVIO = timedelta(hours=24)
 TETO_RECORRENCIA = 1000
 """A recorrência satura aqui: contar além disso custaria caro (um incidente de varredura passa
 de 300 mil eventos) e nenhum modificador de política pode usar limiar maior."""
@@ -33,6 +34,11 @@ class Contexto(BaseModel):
     )
     confirmado: bool = Field(default=False, description="Ataque confirmado pela fonte ou analista")
     fora_do_horario: bool = Field(default=False, description="Fora do expediente do tenant")
+    ataque_previo_no_ativo: bool = Field(
+        default=False,
+        description="O mesmo ativo teve, nas últimas 24 h, outro incidente P1 ou P2 de outra "
+        "categoria (um passo anterior do ataque)",
+    )
 
 
 class EstadoIncidente(StrEnum):

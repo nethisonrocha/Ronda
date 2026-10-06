@@ -4,7 +4,7 @@ Datasets do projeto. **Esta pasta fica fora do git**: só este README e o manife
 [`datasets.yaml`](datasets.yaml) são versionados. Isso tem três motivos:
 
 - **Tamanho.** Os datasets de fluxo passam de gigabytes.
-- **Licença.** O uso comercial dos NetFlow da UQ exige acordo com os autores, e a licença do AIT-ADS precisa ser conferida no Zenodo antes de qualquer redistribuição.
+- **Licença.** O uso comercial dos NetFlow da UQ exige acordo com os autores, e os CIC não publicam licença nenhuma (veja a tabela abaixo).
 - **Reprodutibilidade.** Quem clona o repositório baixa exatamente a versão registrada no manifesto, com checksum conferido.
 
 ## Como obter
@@ -45,15 +45,34 @@ data/
   cuja licença permite redistribuição, ou alertas gerados por nós com IPs anonimizados.
 - **Dataset derivado herda a licença.** O dataset do tradutor (fase 4) deriva do AIT-ADS. Se for publicado no Hugging Face Hub, a licença precisa ser compatível com a do original.
 
+### Trechos do AIT-ADS em `samples/` (pendência D4, 06/10/2026)
+
+O mesmo alerta existe sob duas licenças, conforme a fonte de onde é copiado. Não é parecer
+jurídico; é o que as duas licenças pedem.
+
+- **JSON e `labels.csv` do Zenodo: CC BY 4.0.** Trechos podem entrar em `samples/`, inclusive
+  para uso comercial, com atribuição: autores (Landauer, Skopik, Wurzenberger / AIT), DOI
+  10.5281/zenodo.8263181, link para a licença e o que foi alterado (recorte, IPs anonimizados).
+  Os trechos continuam CC BY 4.0 e não mudam a licença Apache-2.0 do código. Ponha a atribuição
+  num `NOTICE` ou num `README` da pasta.
+- **CSV do GitHub do AIT (`alerts_csv`): GPL-3.0.** Um trecho precisaria continuar GPL-3.0, numa
+  pasta própria com o `LICENSE` da GPL e o aviso de origem (commit `5459b57`). A leitura usual é
+  que um arquivo de dados lido por testes é um "agregado" e não torna o código GPL, mas isso não
+  é pacífico: a GPL foi escrita para software.
+- **Regra do projeto:** fixtures e amostras saem **dos JSON do Zenodo**, com os rótulos gerados
+  pelo código do próprio Ronda a partir do `labels.csv`. Nada do CSV GPL entra no repositório.
+
 ## Datasets
 
 | Chave | Uso | Download | Licença |
 | --- | --- | --- | --- |
-| `ait-ads` | avaliação da governança, tradutor (JSON do Zenodo) | automático | a conferir no Zenodo |
+| `ait-ads` | avaliação da governança, tradutor (JSON e `labels.csv` do Zenodo, em `raw/ait-ads/json/`) | automático | CC BY 4.0 |
 | `ait-ads-csv` | avaliação da governança (CSV do GitHub do AIT, em `raw/ait-ads/csv/`) | automático | GPL-3.0 (repositório) |
-| `cic-ids2017` | detector (base do TCC) | manual | a conferir |
-| `cic-ids2017-improved` | detector, versão corrigida | automático | a conferir |
-| `netflow-v3` | detector, generalização | automático | uso comercial exige acordo |
-| `bccc` | detector | automático | a conferir |
+| `cic-ids2017` | detector (base do TCC) | manual (formulário da UNB) | nenhuma publicada; "para pesquisadores", com citação |
+| `cic-ids2017-improved` | detector, versão corrigida (WTMC2021) | automático | nenhuma publicada |
+| `netflow-v3` | detector, generalização (NF-CSE-CIC-IDS2018-v3) | manual (UQ RDM) | uso comercial exige acordo |
+| `bccc` | detector | manual (formulário) | a definir: ainda não se sabe qual dataset do BCCC é |
 
-Citações e URLs estão no manifesto, e os campos ainda não conferidos estão como `null`.
+Citações, URLs e checksums estão no manifesto, conferidos nas páginas oficiais em 06/10/2026.
+Os campos que continuam `null` não puderam ser confirmados (estão atrás de formulário, ou o
+pacote não está na máquina).

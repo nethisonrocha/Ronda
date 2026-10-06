@@ -24,12 +24,13 @@ from ronda.correlation import (
     Reavaliacao,
     agrupar,
     ativo_de_correlacao,
+    montar_contexto,
     novo_incidente,
     precisa_reavaliar,
     reavaliar,
 )
 from ronda.domain.event import Evento
-from ronda.domain.incident import Incidente
+from ronda.domain.incident import JANELA_ATAQUE_PREVIO, Incidente
 from ronda.domain.priority import Prioridade
 from ronda.governance.engine import Motor
 from ronda.governance.policy import Politica, RepositorioPoliticas
@@ -92,12 +93,19 @@ class Pipeline:
             incidentes = RepositorioIncidentes(sessao)
             incidente, novo = self._incidente_do_evento(sessao, incidentes, evento, ativo, politica)
             incidentes.vincular_evento(incidente.id, evento.id)
-            contexto = incidente.contexto.model_copy(
-                update={
-                    "recorrencia_24h": incidentes.recorrencia(
-                        incidente.chave_correlacao, ate=evento.ocorrido_em
-                    )
-                }
+            ataque_previo = (
+                ativo is not None
+                and politica.usa("ataque_previo_no_ativo")
+                and incidentes.grave_de_outra_categoria(
+                    ativo, evento.categoria.value, evento.ocorrido_em - JANELA_ATAQUE_PREVIO
+                )
+            )
+            contexto = montar_contexto(
+                incidente.contexto,
+                politica,
+                evento.ocorrido_em,
+                incidentes.recorrencia(incidente.chave_correlacao, ate=evento.ocorrido_em),
+                ataque_previo,
             )
             prioridade, decisao_id = incidente.prioridade, None
             if precisa_reavaliar(novo, incidente.contexto, contexto):

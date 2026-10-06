@@ -126,10 +126,12 @@ def test_mapping_do_pacote_carrega_e_segue_a_taxonomia():
     mapeamento = Mapeamento.carregar()
     assert mapeamento.wazuh.regras["31101"] is Categoria.reconhecimento  # exceção da taxonomia
     assert mapeamento.wazuh.regras["52507"] is Categoria.benigno  # ClamAV, apesar de "virus"
-    assert (
-        mapeamento.suricata.assinaturas["ET INFO Observed DNS Query to .biz TLD"]
-        is Categoria.exfiltracao
-    )
+    # Decisões de 06/10/2026: .biz deixou de ser exfiltração (A2/T4), as anomalias de protocolo
+    # da varredura de serviços são reconhecimento (T2) e o 31510 é força bruta (T7).
+    assinaturas = mapeamento.suricata.assinaturas
+    assert assinaturas["ET INFO Observed DNS Query to .biz TLD"] is Categoria.desconhecido
+    assert assinaturas["SURICATA SMTP invalid reply"] is Categoria.reconhecimento
+    assert mapeamento.wazuh.regras["31510"] is Categoria.forca_bruta
     assert "20161" in mapeamento.descartar.regras_fastlog
 
 
@@ -198,7 +200,7 @@ def test_sem_predecoder_o_ativo_e_o_agente(adaptador):
         (
             "ET INFO Observed DNS Query to .biz TLD",
             "Potentially Bad Traffic",
-            "exfiltracao",
+            "desconhecido",
             "exata",
         ),
         (

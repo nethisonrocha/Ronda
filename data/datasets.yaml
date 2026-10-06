@@ -5,6 +5,9 @@
 # usar o dataset. Com sha256 null, o script baixa, mostra o checksum calculado e avisa;
 # cole o valor aqui para travar a versão.
 #
+# Conferido em 06/10/2026 nas páginas oficiais (pendência D1). Os sha256 de `conteudo` são
+# dos arquivos que já estavam na máquina; o script os aceita sem baixar o pacote de novo.
+#
 # download: automatico  → o script baixa pela url
 # download: manual      → exige cadastro ou acordo; o script só diz onde colocar o arquivo
 
@@ -12,16 +15,44 @@ datasets:
   ait-ads:
     nome: AIT Alert Data Set (AIT-ADS)
     uso: [governance-eval, translator]
-    pagina: https://zenodo.org/record/8263181   # arquivo ait_ads.zip
-    versao: null
-    licenca: null         # conferir no Zenodo antes de redistribuir qualquer trecho
+    pagina: https://zenodo.org/records/8263181   # DOI 10.5281/zenodo.8263181
+    versao: "1 (Zenodo, 2023-08-18)"
+    licenca: CC-BY-4.0    # trechos podem ser redistribuídos com atribuição (D4)
     citacao: >-
       Landauer, Skopik e Wurzenberger. Introducing a New Alert Data Set for Multi-Step
-      Attack Analysis. arXiv:2308.12627, 2023.
+      Attack Analysis. CSET 2024, pp. 41–53. DOI 10.1145/3675741.3675748 (preprint:
+      arXiv:2308.12627, 2023).
     download: automatico
-    # JSON (aminer e wazuh) em raw/ait-ads/json; os CSV são a fonte abaixo. Falta o sha256
-    # do ait_ads.zip (só os arquivos extraídos estão na máquina).
-    arquivos: []
+    # O zip não tem pasta: os 16 JSON (aminer e wazuh) vão para raw/ait-ads/json. O
+    # labels.csv (início e fim de cada fase) é um arquivo à parte no Zenodo e vai junto.
+    # Os CSV com rótulo por alerta são a fonte abaixo.
+    pasta: ait-ads/json
+    arquivos:
+      - url: https://zenodo.org/api/records/8263181/files/ait_ads.zip/content
+        nome: ait_ads.zip
+        sha256: 9f0595c4ebe56ac9223763881f55369dd4f249a8108064e4ae108eb3309aeeb9
+        descompactar: true
+        conteudo:
+          fox_aminer.json: 3de2f6d87c843b99dbc5ca3d5225fcd42f60938187d6391dc33d01c216fffcb4
+          fox_wazuh.json: e03787f1a4402b034c4c2648c0632d92c5982aecaa6146837695ca7aa3023b51
+          harrison_aminer.json: bf10cf4aae7513f02da68b6bf5221c8bdc2a7ecffde25d534455da7f1823dd92
+          harrison_wazuh.json: 6c5571aca9b55812f7497a929008a740515c9f866f026f25ddf94cc01ac1ad10
+          russellmitchell_aminer.json: f8f7698833836d0e24624d53981474795ec6f8991a1b33d5fb2e9e411c24752f
+          russellmitchell_wazuh.json: da4b882de7df765d4fbedd772a5bf892e7a440580d3654c585d6d124bfb94832
+          santos_aminer.json: 45d9e531e66b047df69dfe128548e1d8f314b8c6c2df976a026cc47709b7df9f
+          santos_wazuh.json: df298d52ab555a75b1e6a60e80aae973e845d85ba9875d001bd2f5f4f3b5097b
+          shaw_aminer.json: 1e18cd6b3f94ec32c72741351887f975c3157c7c271adcd5e4589617c70c161c
+          shaw_wazuh.json: 45e34b65ce08c6a49b0ba52a4f36dbe5829d26240a2acccf8b3842201b6afca8
+          wardbeck_aminer.json: cc4f073ff9f7bea57b17aa263d58c7cc0b4a7a3b9499cdf3491cf1510d3a98bd
+          wardbeck_wazuh.json: b4e483c67e4de2a20b1b559692981e912fb83f1d1831b6e1f7e5760b16fe7117
+          wheeler_aminer.json: aa2f2240d627f6cd37916f1ab7ad6452edf51a01f8ab831b29f9d0e2567b357e
+          wheeler_wazuh.json: 3dbbb2da0d190eb5d0b9384a724806c1c65d170e8e84955650b778f3019e40fc
+          wilson_aminer.json: 08f87d83a5b4095b7fc7b2fb07ed105bc3cfd5bf23ca25529f2f1b932d51613f
+          wilson_wazuh.json: dddc4b891425750c25bfe7fceb95f68e0dd5bd4e93f7a1d16577024703c41478
+      - url: https://zenodo.org/api/records/8263181/files/labels.csv/content
+        nome: labels.csv
+        sha256: 633e09b42772eabbbe5b48598220860eead60b7352efb01973fc45a5034290c0
+        descompactar: false
 
   # Os alertas em CSV não vêm do zip do Zenodo, e sim do repositório do AIT no GitHub,
   # fixado num commit. O zip do repositório traz a pasta alerts_csv/, que é extraída sem
@@ -56,44 +87,91 @@ datasets:
     nome: CIC-IDS2017
     uso: [detector]
     pagina: https://www.unb.ca/cic/datasets/ids-2017.html
-    versao: null
-    licenca: null
+    versao: "captura de 03/07 a 07/07/2017; CSV de 07/06/2018"
+    # Sem licença nomeada: a UNB só diz "publicly available for researchers" e pede a
+    # citação. Nada sobre redistribuição ou uso comercial: não redistribua trechos.
+    licenca: sem licença publicada (uso em pesquisa, com citação)
     citacao: >-
       Sharafaldin, Lashkari e Ghorbani. Toward Generating a New Intrusion Detection
-      Dataset and Intrusion Traffic Characterization. ICISSP, 2018.
+      Dataset and Intrusion Traffic Characterization. ICISSP 2018, pp. 108–116.
+      DOI 10.5220/0006639801080116.
     download: manual      # a UNB pede formulário antes de liberar o download
-    arquivos: []
+    arquivos:
+      # O conteúdo do zip fica atrás do formulário: o sha256 do zip e a pasta interna não
+      # foram conferidos. Os CSV abaixo são os que estão na máquina.
+      - url: null
+        nome: MachineLearningCSV.zip
+        sha256: null
+        descompactar: true
+        conteudo:
+          Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv: 6ff1580f5f81c0ae28a26f7631721018577f5f7c5e0feac28b795fcfe7b411ee
+          Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv: ca1824c51bfbb7b3c72290a11be04366ba8815878c6a1cc5c44cb1cee269e99b
+          Friday-WorkingHours-Morning.pcap_ISCX.csv: 53a41c24d570ea83b7ac55b2e94df94e7a8216aeb80a2af0246b6bc8bb543000
+          Monday-WorkingHours.pcap_ISCX.csv: 852c4beb34eda186f32561fa79df7a0747e92e1a6535b01270820dd9ffe17f34
+          Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv: 6bcda3857c2504676034e3ea57762d38393cc734cb377a726bd5cb153961b1b5
+          Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv: d67066211fb1689c78406f1506f4c44704ecb92088353d5c96d96d6474eb819d
+          Tuesday-WorkingHours.pcap_ISCX.csv: 52b8692ae8c7d2ed04671fe2b98335693c0a92c7ab157d8c8b534d6523080851
+          Wednesday-workingHours.pcap_ISCX.csv: 893c27dc968bf7a8adef1689f90be55ca4a4dc3088fb63d6ff247ac56856df2a
 
   cic-ids2017-improved:
     nome: CIC-IDS2017 corrigido (Engelen et al.)
     uso: [detector]
     pagina: https://intrusion-detection.distrinet-research.be/WTMC2021/
-    versao: null
-    licenca: null
+    # Há versão mais nova (CNS 2022, outros arquivos e outra citação): trocar é decisão do
+    # dono. Os CSV locais são os da WTMC2021 (nomes, tamanhos e CRC32 conferidos no zip).
+    versao: "WTMC2021, 24/11/2021"
+    licenca: sem licença publicada   # nenhuma página do site fala em licença ou termos
     citacao: >-
       Engelen, Rimmer e Joosen. Troubleshooting an Intrusion Detection Dataset: the
-      CICIDS2017 Case Study. IEEE SPW (WTMC), 2021.
+      CICIDS2017 Case Study. IEEE SPW 2021, pp. 7–12. DOI 10.1109/SPW53761.2021.00009.
     download: automatico
-    arquivos: []
+    arquivos:
+      - url: https://intrusion-detection.distrinet-research.be/WTMC2021/Dataset/dataset.zip
+        nome: dataset.zip
+        sha256: null      # 334 MB, não baixado; o script mostra o valor na primeira vez
+        descompactar: true
+        conteudo:
+          Friday-WorkingHours.csv: 8bf5a79222d2a553b75fe1ee81cc3ddff89b87befaef52e62368fdb2e3a79def
+          Monday-WorkingHours.csv: 580bc5b3a48ccaa9b61d6936bb88adb00a6a069a02c974e946bd324bc09971bc
+          Thursday-WorkingHours.csv: 3db32a8e9a4da80aa15fd0bbf69733c8de8c6e6147fe279770eec1be6c263d65
+          Tuesday-WorkingHours.csv: 59d60eff01526b511fa575a08a9a0e241674276adf1aa07471c947f7d733e19a
+          Wednesday-WorkingHours.csv: 820446eb19713031827a1893871e30fb9da4c3b21ad5cd15d9a2ef6686a37583
 
   netflow-v3:
     nome: NetFlow v3 (Universidade de Queensland)
     uso: [detector]
-    pagina: https://staff.itee.uq.edu.au/marius/NIDS_datasets/
-    versao: v3
-    licenca: null         # uso comercial exige acordo com os autores
-    citacao: null
-    download: automatico
-    arquivos: []
+    # O arquivo local é o NF-CSE-CIC-IDS2018-v3 (UQ eSpace UQ:ece9b83, DOI 10.48610/ece9b83).
+    pagina: https://espace.library.uq.edu.au/view/UQ:ece9b83
+    versao: "v3, 2025-02-28"
+    licenca: Permitted Re-Use with Commercial Use Restriction   # uso comercial exige acordo
+    citacao: >-
+      Luay, Layeghy, Hosseininoorbin, Sarhan, Moustafa e Portmann. Temporal Analysis of
+      NetFlow Datasets for Network Intrusion Detection Systems. arXiv:2503.04404, 2025.
+      Dataset: NF-CSE-CIC-IDS2018-v3, The University of Queensland, DOI 10.48610/ece9b83.
+    # O link oficial (UQ RDM) é uma aplicação web, não um arquivo: o download é manual.
+    download: manual
+    pasta: netflow-v3/data
+    arquivos:
+      - url: null
+        nome: NF-CSE-CIC-IDS2018-v3.zip   # nome do pacote não confirmado
+        sha256: null
+        descompactar: true
+        conteudo:
+          NF-CICIDS2018-v3.csv: 242a6971cc801eae621b1fc4d966db2cd0af9cc866805f36a6fc5d0058dfbb74
+          NetFlow_v3_Features.csv: abe3ce6e6ff731d72d76e029b512585c0dbcbd8e03ff6dbe2bd04b560723bd67
 
+  # Qual dataset do BCCC (York University) é este ainda é decisão do dono. O mais provável
+  # é o BCCC-CIC-IDS2017, que a própria página do CIC-IDS2017 indica; os outros candidatos
+  # são BCCC-CSE-CIC-IDS2018, BCCC-cPacket-Cloud-DDoS-2024 e CIC-BCCC-NRC
+  # TabularIoTAttack-2024. Todos pedem formulário e nenhum publica licença.
   bccc:
-    nome: BCCC
+    nome: BCCC (a definir)
     uso: [detector]
-    pagina: null
+    pagina: https://www.yorku.ca/research/bccc/ucs-technical/cybersecurity-datasets-cds/
     versao: null
     licenca: null
     citacao: null
-    download: automatico
+    download: manual
     arquivos: []
 
 # Exemplo de entrada de arquivo:

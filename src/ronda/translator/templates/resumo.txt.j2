@@ -1,11 +1,13 @@
 📋 Resumo diário · {{ data }}
-{{ itens | length }} incidente{{ "s" if itens | length != 1 else "" }} {{ prioridade }} desde o último resumo
+{{ total }} incidente{{ "s" if total != 1 else "" }} {{ prioridade }} desde o último resumo ({{ eventos }} evento{{ "s" if eventos != 1 else "" }})
 
 {% for grupo in grupos %}
-{{ grupo.titulo }} ({{ grupo.itens | length }})
-{% for item in grupo.itens %}
-- {{ item.ativo }} · {{ item.eventos }} evento{{ "s" if item.eventos != 1 else "" }}
-{% endfor %}
+{{ grupo.titulo }}: {{ grupo.incidentes }} incidente{{ "s" if grupo.incidentes != 1 else "" }} em {{ grupo.ativos }} ativo{{ "s" if grupo.ativos != 1 else "" }}, {{ grupo.eventos }} evento{{ "s" if grupo.eventos != 1 else "" }}
+{% if grupo.ativos > 1 %}
+  mais frequentes: {{ grupo.frequentes | map("join", " (") | join("), ") }})
+{% else %}
+  em {{ grupo.frequentes[0][0] }}
+{% endif %}
 
 {% endfor %}
 Nada aqui exige ação imediata; vale revisar a política se algo se repete todo dia.

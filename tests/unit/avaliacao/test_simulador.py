@@ -1,9 +1,10 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
 import yaml
 
 from ronda.avaliacao import ResultadoCenario, Rotulo, Simulador
-from ronda.governance.policy import ler_politica
+from ronda.governance.policy import PoliticaInvalida, ler_politica
 from ronda.notifier.channels.base import CanalFalso
 from tests.conftest import POLITICAS_EXEMPLO
 
@@ -45,7 +46,7 @@ def test_p1_sai_na_hora_e_a_decisao_so_conta_quando_a_prioridade_sobe(evento):
 
 def test_recorrencia_sobe_para_p2_que_sai_agrupado_e_o_p3_vai_para_o_resumo(evento):
     sim, canal = simulador()
-    for minuto in range(5):
+    for minuto in range(50):
         sim.processar(
             evento(categoria="forca_bruta", ip_destino=PAGAMENTOS, ocorrido_em=em(minuto))
         )
@@ -53,7 +54,7 @@ def test_recorrencia_sobe_para_p2_que_sai_agrupado_e_o_p3_vai_para_o_resumo(even
 
     (incidente,) = sim.incidentes.values()
     assert incidente.prioridade.value == "P2"
-    assert sim.contagens.decisoes == 2  # P3 ao nascer, P2 na 5ª ocorrência
+    assert sim.contagens.decisoes == 2  # P3 ao nascer, P2 na 50ª ocorrência
     assert sim.contagens.mensagens == {("individual", "P2"): 1, ("resumo", "P3"): 1}
     # O P2 espera a janela do agrupamento (10 min); o P3, o resumo das 08:00 do dia seguinte.
     assert sim.contagens.espera["P2"] == [timedelta(minutes=10)]
@@ -76,7 +77,7 @@ def test_no_horario_de_silencio_so_o_p1_sai(evento):
     sim, _ = simulador()
     madrugada = datetime(2026, 9, 26, 2, 0, tzinfo=UTC)  # 23:00 em Fortaleza
     sim.processar(evento(categoria="negacao_servico", ip_destino=PAGAMENTOS, ocorrido_em=madrugada))
-    for minuto in range(5):
+    for minuto in range(50):
         sim.processar(
             evento(
                 categoria="forca_bruta",
@@ -87,24 +88,22 @@ def test_no_horario_de_silencio_so_o_p1_sai(evento):
     sim.finalizar()
 
     assert sim.contagens.espera["P1"] == [timedelta(0)]
-    # O P2 nasceu às 02:04 UTC e só sai às 10:00 UTC, 07:00 em Fortaleza.
-    assert sim.contagens.espera["P2"] == [timedelta(hours=7, minutes=56)]
+    # O P2 nasceu às 02:49 UTC e só sai às 10:00 UTC, 07:00 em Fortaleza.
+    assert sim.contagens.espera["P2"] == [timedelta(hours=7, minutes=11)]
 
 
-def test_silencio_por_origem_so_age_quando_e_maior_que_a_janela(evento):
-    def rodar(silencio):
-        sim, _ = simulador(silencio_por_origem=silencio)
-        for minuto in (0, 40):  # dois incidentes da mesma chave: 40 min > janela de 30 min
-            sim.processar(
-                evento(categoria="negacao_servico", ip_destino=PAGAMENTOS, ocorrido_em=em(minuto))
-            )
-        sim.finalizar()
-        return sim.contagens
+def test_silencio_por_origem_suprime_o_incidente_novo_da_mesma_chave(evento):
+    # Com o silêncio igual à janela (30 min), a regra nunca agia: a política agora recusa (A3).
+    with pytest.raises(PoliticaInvalida, match="nunca suprime"):
+        politica(silencio_por_origem="30min")
 
-    igual_a_janela = rodar("30min")
-    assert igual_a_janela.mensagens == {("individual", "P1"): 2}
-
-    maior = rodar("2h")
+    sim, _ = simulador(silencio_por_origem="2h")
+    for minuto in (0, 40):  # dois incidentes da mesma chave: 40 min > janela de 30 min
+        sim.processar(
+            evento(categoria="negacao_servico", ip_destino=PAGAMENTOS, ocorrido_em=em(minuto))
+        )
+    sim.finalizar()
+    maior = sim.contagens
     assert maior.mensagens == {("individual", "P1"): 1}
     assert maior.notificacoes[("imediata", "suprimida", "P1")] == 1
     assert maior.motivos_supressao == {"silêncio por origem": 1}
@@ -172,3 +171,18 @@ def test_fase_que_cai_num_p1_ja_aberto_nao_conta_como_gerada(evento):
     assert linha["gerou"] == "-"
     assert linha["diagnostico"] == "caiu num P1/P2 que já existia"
     assert resultado.resumo()["graves_fora_de_ataque"] == 1
+
+
+def test_ataque_previo_no_ativo_como_o_pipeline(evento):
+    sim, _ = simulador()
+    sim.processar(evento(categoria="ataque_web", ip_destino=PAGAMENTOS, ocorrido_em=em(0)))  # P1
+    sudo = sim.processar(
+        evento(categoria="comprometimento", ip_destino=PAGAMENTOS, ocorrido_em=em(30))
+    )
+    assert sudo.contexto.ataque_previo_no_ativo
+    assert sudo.prioridade.value == "P1"
+    # Na segunda-feira, no expediente, o ataque web de sexta ficou para trás: o sudo é P2.
+    tarde = sim.processar(
+        evento(categoria="comprometimento", ip_destino="10.0.1.6", ocorrido_em=em(3 * 24 * 60))
+    )
+    assert not tarde.contexto.ataque_previo_no_ativo and tarde.prioridade.value == "P2"

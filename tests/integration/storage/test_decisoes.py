@@ -17,7 +17,7 @@ PAGAMENTOS = "10.0.1.5"
 
 def test_decisao_do_motor_volta_igual_com_o_rastro(banco, politica_demo, evento):
     e = evento(ip_destino=PAGAMENTOS, categoria="forca_bruta")
-    decisao = Motor(politica_demo).avaliar(e, Contexto(recorrencia_24h=9, confirmado=True))
+    decisao = Motor(politica_demo).avaliar(e, Contexto(recorrencia_24h=50, confirmado=True))
     with banco.sessao("demo") as sessao:
         RepositorioEventos(sessao).registrar(e)
         registrada = RepositorioDecisoes(sessao).registrar(decisao, evento_id=e.id)
@@ -47,7 +47,7 @@ def test_historico_do_incidente_em_ordem(banco, politica_demo, evento, incidente
     motor = Motor(politica_demo)
     primeira = motor.avaliar(evento(ip_destino=PAGAMENTOS, categoria="forca_bruta"))
     segunda = motor.avaliar(
-        evento(ip_destino=PAGAMENTOS, categoria="forca_bruta"), Contexto(recorrencia_24h=5)
+        evento(ip_destino=PAGAMENTOS, categoria="forca_bruta"), Contexto(recorrencia_24h=50)
     )
     with banco.sessao("demo") as sessao:
         RepositorioIncidentes(sessao).abrir(i)

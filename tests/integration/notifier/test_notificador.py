@@ -128,8 +128,9 @@ def test_p3_espera_o_resumo_das_oito(pipeline, notificador, canal, relogio, even
 def test_silencio_por_origem_suprime_o_incidente_novo_da_mesma_chave(
     pipeline, notificador, banco, evento
 ):
-    gerar(pipeline, evento, "forca_bruta", "10.0.1.5", n=5)  # P3 e depois P2
-    gerar(pipeline, evento, "forca_bruta", "10.0.1.5", minuto=60)  # 55 min depois: incidente novo
+    gerar(pipeline, evento, "forca_bruta", "10.0.1.5", n=50)  # P3 e, na 50ª, P2
+    # 41 min depois do último: passou a janela (30 min), mas não o silêncio (2 h).
+    gerar(pipeline, evento, "forca_bruta", "10.0.1.5", minuto=90)
 
     por_estado = {}
     for n in notificacoes(banco):

@@ -5,8 +5,8 @@ from __future__ import annotations
 import operator
 import re
 from collections.abc import Callable
+from datetime import datetime, timedelta
 from datetime import time as hora
-from datetime import timedelta
 from pathlib import Path
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -123,6 +123,12 @@ class Modificador(_Estrito):
     se: str
     subir: int = Field(default=0, ge=0)
     descer: int = Field(default=0, ge=0)
+    categorias: list[Categoria] = Field(
+        default_factory=list, description="Só vale para estas categorias (vazio: todas)"
+    )
+    exceto: list[Categoria] = Field(
+        default_factory=list, description="Não vale para estas categorias"
+    )
 
     _condicao: Condicao = PrivateAttr()
 
@@ -130,6 +136,8 @@ class Modificador(_Estrito):
     def _validar(self) -> Modificador:
         if (self.subir > 0) == (self.descer > 0):
             raise ValueError(f"modificador {self.se!r}: informe só um entre subir e descer")
+        if self.categorias and self.exceto:
+            raise ValueError(f"modificador {self.se!r}: informe categorias ou exceto, não os dois")
         self._condicao = Condicao(self.se)
         return self
 
@@ -137,8 +145,22 @@ class Modificador(_Estrito):
     def passos(self) -> int:
         return self.subir - self.descer
 
-    def aplica(self, contexto: Contexto) -> bool:
+    def vale_para(self, categoria: Categoria) -> bool:
+        if self.categorias:
+            return categoria in self.categorias
+        return categoria not in self.exceto
+
+    def aplica(self, contexto: Contexto, categoria: Categoria | None = None) -> bool:
+        if categoria is not None and not self.vale_para(categoria):
+            return False
         return self._condicao.avaliar(contexto)
+
+    @property
+    def descricao(self) -> str:
+        """A condição como aparece no rastro, com o escopo de categorias quando houver."""
+        if self.categorias:
+            return f"{self.se} (só {', '.join(c.value for c in self.categorias)})"
+        return self.se
 
 
 class RegrasUrgencia(_Estrito):
@@ -185,6 +207,41 @@ class HorarioSilencio(_Estrito):
     """Pode atravessar a meia-noite (22:00 → 07:00)."""
 
 
+DIAS = ("seg", "ter", "qua", "qui", "sex", "sab", "dom")
+
+
+class Expediente(_Estrito):
+    """Horário de trabalho do tenant: fora dele, o contexto marca `fora_do_horario`."""
+
+    fuso: str = "America/Fortaleza"
+    dias: list[Literal["seg", "ter", "qua", "qui", "sex", "sab", "dom"]] = Field(
+        default_factory=lambda: ["seg", "ter", "qua", "qui", "sex"]
+    )
+    inicio: Hora = hora(8, 0)
+    fim: Hora = hora(18, 0)
+
+    @field_validator("fuso")
+    @classmethod
+    def _fuso_existe(cls, fuso: str) -> str:
+        try:
+            ZoneInfo(fuso)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError(f"fuso desconhecido: {fuso!r}") from None
+        return fuso
+
+    @model_validator(mode="after")
+    def _intervalo(self) -> Expediente:
+        if self.inicio >= self.fim:
+            raise ValueError("expediente: o início precisa vir antes do fim")
+        return self
+
+    def fora(self, instante: datetime) -> bool:
+        local = instante.astimezone(ZoneInfo(self.fuso))
+        if DIAS[local.weekday()] not in self.dias:
+            return True
+        return not self.inicio <= local.time() < self.fim
+
+
 class RegrasNotificacao(_Estrito):
     """Política anti-fadiga do tenant. O P1 é o único que fura o horário de silêncio."""
 
@@ -197,7 +254,7 @@ class RegrasNotificacao(_Estrito):
     modos: dict[Prioridade, ModoDaPolitica] = Field(default_factory=lambda: dict(MODOS_PADRAO))
     agrupamento: Duracao = Field(default=timedelta(minutes=10), description="Janela do P2 agrupado")
     silencio_por_origem: Duracao = Field(
-        default=timedelta(minutes=30),
+        default=timedelta(hours=2),
         description="Depois de notificar uma origem (mesma origem, categoria e ativo), não repete "
         "no mesmo nível durante este tempo",
     )
@@ -241,8 +298,33 @@ class Politica(_Estrito):
     matriz: dict[Impacto, dict[Urgencia, Prioridade]]
     resposta: dict[Prioridade, Duracao] = Field(default_factory=dict)
     correlacao: RegrasCorrelacao = Field(default_factory=RegrasCorrelacao)
+    expediente: Expediente | None = None
+    """Sem o bloco, nada é considerado fora do horário."""
     notificacao: RegrasNotificacao | None = None
     """Sem o bloco, o tenant não recebe notificação (o dashboard continua mostrando tudo)."""
+
+    def usa(self, campo: str) -> bool:
+        """Algum modificador da política depende deste campo do contexto?
+
+        O pipeline só calcula o que a política usa: `ataque_previo_no_ativo` custa uma consulta
+        ao banco por evento.
+        """
+        return any(m._condicao.campo == campo for m in self.urgencia.modificadores)
+
+    @model_validator(mode="after")
+    def _silencio_maior_que_a_janela(self) -> Politica:
+        # Um incidente novo da mesma chave só nasce depois de `janela` sem evento; com o
+        # silêncio igual ou menor, o aviso anterior sempre já passou dele e a regra nunca age
+        # (0 supressões em 2,3 milhões de eventos na avaliação da fase 2).
+        if (
+            self.notificacao is not None
+            and self.notificacao.silencio_por_origem <= self.correlacao.janela
+        ):
+            raise ValueError(
+                "notificacao.silencio_por_origem precisa ser maior que correlacao.janela; "
+                "igual ou menor, o silêncio por origem nunca suprime nada"
+            )
+        return self
 
     @field_validator("urgencia")
     @classmethod

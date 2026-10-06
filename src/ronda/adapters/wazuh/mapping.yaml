@@ -8,10 +8,10 @@
 #   Suricata: suricata.assinaturas (exata) → suricata.familias_et → suricata.categorias
 #   Sem nenhuma correspondência: desconhecido.
 #
-# A taxonomia ainda é provisória (T6 em docs/pendencias.md).
+# Taxonomia aprovada pelo dono em 06/10/2026 (T1–T8 em docs/pendencias.md).
 
 versao: 1
-taxonomia: provisoria
+taxonomia: aprovada
 descartar:
   regras_fastlog:
   - '20100'
@@ -42,6 +42,7 @@ wazuh:
     '31122': desconhecido
     '31151': reconhecimento
     '31509': forca_bruta
+    '31510': forca_bruta
     '31516': ataque_web
     '52507': benigno
     '80730': desconhecido
@@ -68,19 +69,32 @@ wazuh:
     categoria: benigno
 suricata:
   assinaturas:
+    ET DNS DNS Lookup for localhost.DOMAIN.TLD: desconhecido
+    ET DNS Query for .cc TLD: desconhecido
+    ET DNS Query for .su TLD (Soviet Union) Often Malware Related: desconhecido
     ET DNS Query for .to TLD: desconhecido
+    ET DNS Query to a *.pw domain - Likely Hostile: desconhecido
+    ET HUNTING Possible COVID-19 Domain in SSL Certificate M2: desconhecido
+    ET HUNTING Suspicious Domain Request for Possible COVID-19 Domain M1: desconhecido
+    ET HUNTING Suspicious TLS SNI Request for Possible COVID-19 Domain M1: desconhecido
     ET INFO DNS Query for Suspicious .ga Domain: desconhecido
-    ET INFO Observed DNS Query to .biz TLD: exfiltracao
+    ET INFO Observed DNS Query to .biz TLD: desconhecido
     ET INFO Observed DNS Query to .cloud TLD: desconhecido
+    ET INFO Session Traversal Utilities for NAT (STUN Binding Request): desconhecido
+    ET INFO Session Traversal Utilities for NAT (STUN Binding Response): desconhecido
     ET INFO Suspicious Domain (*.ga) in TLS SNI: desconhecido
+    ET INFO TLS Handshake Failure: desconhecido
     ET POLICY GNU/Linux APT User-Agent Outbound likely related to package management: benigno
+    ET SCAN Behavioral Unusual Port 445 traffic Potential Scan or Infection: reconhecimento
     ET SCAN Possible Nmap User-Agent Observed: reconhecimento
+    SURICATA DNS Unsolicited response: desconhecido
     SURICATA HTTP gzip decompression failed: desconhecido
-    SURICATA HTTP invalid response chunk len: desconhecido
+    SURICATA HTTP invalid response chunk len: reconhecimento
     SURICATA HTTP unable to match response to request: desconhecido
-    SURICATA SMTP invalid reply: desconhecido
-    SURICATA SMTP no server welcome message: desconhecido
-    SURICATA TLS invalid SSLv2 header: desconhecido
+    SURICATA SMTP invalid reply: reconhecimento
+    SURICATA SMTP no server welcome message: reconhecimento
+    SURICATA TLS certificate invalid der: desconhecido
+    SURICATA TLS invalid SSLv2 header: reconhecimento
     SURICATA TLS invalid handshake message: desconhecido
     SURICATA TLS invalid record type: desconhecido
     SURICATA TLS invalid record/traffic: desconhecido

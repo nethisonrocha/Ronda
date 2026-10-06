@@ -61,7 +61,7 @@ CABECALHO = """\
 #   Suricata: suricata.assinaturas (exata) → suricata.familias_et → suricata.categorias
 #   Sem nenhuma correspondência: desconhecido.
 #
-# A taxonomia ainda é provisória (T6 em docs/pendencias.md).
+# Taxonomia aprovada pelo dono em 06/10/2026 (T1–T8 em docs/pendencias.md).
 """
 
 
@@ -87,7 +87,7 @@ def montar(linhas: list[dict[str, str]]) -> dict:
             raise ValueError(f"ferramenta desconhecida na taxonomia: {ferramenta!r}")
     return {
         "versao": 1,
-        "taxonomia": "provisoria",
+        "taxonomia": "aprovada",
         "descartar": {"regras_fastlog": sorted(descartar, key=int)},
         "wazuh": {
             "regras": dict(sorted(regras.items(), key=lambda item: int(item[0]))),

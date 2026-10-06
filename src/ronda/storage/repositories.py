@@ -295,6 +295,25 @@ class RepositorioIncidentes(_Repositorio):
         )
         return [self._para_dominio(linha) for linha in self.sessao.scalars(consulta)]
 
+    def grave_de_outra_categoria(self, ativo: str, categoria: str, desde: datetime) -> bool:
+        """Há outro incidente P1/P2 no ativo, de outra categoria, com evento desde `desde`?
+
+        É o "ataque prévio no ativo" do contexto: a prioridade de um incidente nunca desce, então
+        o incidente que chegou a P1/P2 continua contando até a janela passar.
+        """
+        consulta = (
+            select(IncidenteModel.id)
+            .where(
+                IncidenteModel.tenant_id == self.tenant,
+                IncidenteModel.ativo == ativo,
+                IncidenteModel.categoria != categoria,
+                IncidenteModel.prioridade.in_((Prioridade.P1.value, Prioridade.P2.value)),
+                IncidenteModel.atualizado_em >= desde,
+            )
+            .limit(1)
+        )
+        return self.sessao.scalars(consulta).first() is not None
+
     def atualizar_contexto(self, incidente_id: UUID, contexto: Contexto) -> None:
         self._atualizar(incidente_id, {"contexto": contexto.model_dump(mode="json")})
 

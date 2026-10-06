@@ -13,7 +13,12 @@ from ronda.correlation.grouper import (
     encerrados_por_inatividade,
     novo_incidente,
 )
-from ronda.correlation.lifecycle import Reavaliacao, precisa_reavaliar, reavaliar
+from ronda.correlation.lifecycle import (
+    Reavaliacao,
+    montar_contexto,
+    precisa_reavaliar,
+    reavaliar,
+)
 
 __all__ = [
     "Acao",
@@ -27,6 +32,7 @@ __all__ = [
     "contar_recorrencia",
     "elevar",
     "encerrados_por_inatividade",
+    "montar_contexto",
     "novo_incidente",
     "precisa_reavaliar",
     "reavaliar",

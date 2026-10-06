@@ -25,11 +25,18 @@ from ronda.correlation import (
     CorrelacaoEmMemoria,
     Reavaliacao,
     ativo_de_correlacao,
+    montar_contexto,
     precisa_reavaliar,
     reavaliar,
 )
 from ronda.domain.event import Evento
-from ronda.domain.incident import Contexto, EstadoIncidente, Incidente, chave_correlacao
+from ronda.domain.incident import (
+    JANELA_ATAQUE_PREVIO,
+    Contexto,
+    EstadoIncidente,
+    Incidente,
+    chave_correlacao,
+)
 from ronda.domain.notification import EstadoNotificacao, ModoNotificacao, Notificacao
 from ronda.domain.priority import Prioridade
 from ronda.domain.taxonomy import Categoria
@@ -124,6 +131,10 @@ class Simulador:
         self._proximo_despacho: datetime | None = None
         self._ultimo_resumo: datetime | None = None
         self._ultimo_evento: datetime | None = None
+        self._usa_ataque_previo = politica.usa("ataque_previo_no_ativo")
+        self._graves_por_ativo: dict[str, dict[Categoria, datetime]] = defaultdict(dict)
+        """Ativo → categoria → último evento de um incidente P1/P2 (o `ataque_previo_no_ativo`,
+        como `RepositorioIncidentes.grave_de_outra_categoria`)."""
 
     # --- pipeline -------------------------------------------------------------------------
 
@@ -159,7 +170,13 @@ class Simulador:
             if rotulo.causado:
                 incidente.causados_por_fase[rotulo.fase] += 1
 
-        contexto = incidente.contexto.model_copy(update={"recorrencia_24h": observacao.recorrencia})
+        contexto = montar_contexto(
+            incidente.contexto,
+            self.politica,
+            evento.ocorrido_em,
+            observacao.recorrencia,
+            self._ataque_previo(ativo, evento.categoria, evento.ocorrido_em),
+        )
         if precisa_reavaliar(observacao.novo, incidente.contexto, contexto):
             reav = reavaliar(self.motor, evento, contexto, incidente.prioridade)
             if reav.subiu:
@@ -172,7 +189,21 @@ class Simulador:
                     incidente.rotulo_da_subida = rotulo
                 self._ao_priorizar(incidente, reav, evento)
         incidente.contexto = contexto
+        if ativo is not None and incidente.prioridade in (Prioridade.P1, Prioridade.P2):
+            graves = self._graves_por_ativo[ativo]
+            anterior = graves.get(incidente.categoria)
+            if anterior is None or incidente.atualizado_em > anterior:
+                graves[incidente.categoria] = incidente.atualizado_em
         return incidente
+
+    def _ataque_previo(self, ativo: str | None, categoria: Categoria, instante: datetime) -> bool:
+        if ativo is None or not self._usa_ataque_previo:
+            return False
+        desde = instante - JANELA_ATAQUE_PREVIO
+        return any(
+            outra != categoria and ultimo >= desde
+            for outra, ultimo in self._graves_por_ativo.get(ativo, {}).items()
+        )
 
     def finalizar(self, margem: timedelta = timedelta(days=1, hours=1)) -> None:
         """Deixa o relógio correr depois do último evento: o que esperava o fim do horário de

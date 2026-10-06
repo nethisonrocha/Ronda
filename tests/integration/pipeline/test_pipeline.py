@@ -34,6 +34,8 @@ def pipeline_janela_longa(banco, tmp_path):
     """Política demo com janela de 7 dias, para a recorrência poder cair com o incidente aberto."""
     dados = yaml.safe_load((POLITICAS_EXEMPLO / "demo.yaml").read_text(encoding="utf-8"))
     dados["correlacao"] = {"janela": "7d"}
+    # O silêncio por origem precisa ser maior que a janela; aqui só a correlação importa.
+    dados["notificacao"]["silencio_por_origem"] = "8d"
     (tmp_path / "demo.yaml").write_text(yaml.safe_dump(dados), encoding="utf-8")
     return Pipeline(banco, RepositorioPoliticas(tmp_path))
 
@@ -50,26 +52,21 @@ def ler(banco, funcao):
 def test_eventos_da_mesma_chave_viram_um_incidente_e_a_decisao_so_e_gravada_quando_sobe(
     banco, pipeline, evento
 ):
-    resultados = [pipeline.processar_evento(forca_bruta(evento, m)) for m in range(6)]
+    # Força bruta só sobe com 50 falhas em 24 h (decisão A1 de 06/10/2026).
+    resultados = [pipeline.processar_evento(forca_bruta(evento, m)) for m in range(51)]
 
     assert {r.incidente_id for r in resultados} == {resultados[0].incidente_id}
-    assert [r.prioridade for r in resultados] == [Prioridade.P3] * 4 + [Prioridade.P2] * 2
-    assert [r.decisao_id is not None for r in resultados] == [
-        True,
-        False,
-        False,
-        False,
-        True,
-        False,
-    ]
+    assert [r.prioridade for r in resultados] == [Prioridade.P3] * 49 + [Prioridade.P2] * 2
+    assert [r.decisao_id is not None for r in resultados] == [True] + [False] * 48 + [True, False]
 
     incidente = ler(banco, lambda s: RepositorioIncidentes(s).obter(resultados[0].incidente_id))
     decisoes = ler(banco, lambda s: RepositorioDecisoes(s).do_incidente(incidente.id))
-    assert (incidente.total_eventos, incidente.prioridade) == (6, Prioridade.P2)
-    assert incidente.contexto.recorrencia_24h == 6
+    assert (incidente.total_eventos, incidente.prioridade) == (51, Prioridade.P2)
+    assert incidente.contexto.recorrencia_24h == 51
     assert incidente.chave_correlacao == "wazuh|forca_bruta|servidor-pagamentos"
     assert [d.decisao.prioridade for d in decisoes] == [Prioridade.P3, Prioridade.P2]
-    assert "recorrencia_24h >= 5: urgência sobe para alta" in decisoes[-1].decisao.rastro.resumo
+    rastro = decisoes[-1].decisao.rastro.resumo
+    assert "recorrencia_24h >= 50 (só forca_bruta): urgência sobe para alta" in rastro
 
 
 def test_depois_da_janela_o_incidente_se_encerra_e_outro_abre(banco, pipeline, evento):
@@ -98,12 +95,12 @@ def test_a_mesma_mensagem_de_novo_nao_mexe_em_nada(banco, pipeline, evento):
 
 
 def test_prioridade_nao_desce_quando_a_recorrencia_cai(banco, pipeline_janela_longa, evento):
-    for m in range(5):
-        pipeline_janela_longa.processar_evento(forca_bruta(evento, m))  # recorrência 5 → P2
+    for m in range(50):
+        pipeline_janela_longa.processar_evento(forca_bruta(evento, m))  # recorrência 50 → P2
     depois = pipeline_janela_longa.processar_evento(forca_bruta(evento, 25 * 60))  # 25 h depois
 
     incidente = ler(banco, lambda s: RepositorioIncidentes(s).obter(depois.incidente_id))
-    assert incidente.contexto.recorrencia_24h == 1  # os cinco saíram da janela de 24 h
+    assert incidente.contexto.recorrencia_24h == 1  # os cinquenta saíram da janela de 24 h
     assert incidente.prioridade is Prioridade.P2 and depois.decisao_id is None
     decisoes = ler(banco, lambda s: RepositorioDecisoes(s).do_incidente(incidente.id))
     assert [d.decisao.prioridade for d in decisoes] == [Prioridade.P3, Prioridade.P2]
@@ -128,7 +125,7 @@ def test_gancho_do_notificador_roda_a_cada_subida_dentro_da_transacao(banco, eve
         chamadas.append((incidente.prioridade, registrada.id, sessao.info["tenant_id"]))
 
     pipeline = Pipeline(banco, RepositorioPoliticas(POLITICAS_EXEMPLO), ao_priorizar=ao_priorizar)
-    for m in range(5):
+    for m in range(50):
         pipeline.processar_evento(forca_bruta(evento, m))
     assert [(p, t) for p, _, t in chamadas] == [(Prioridade.P3, "demo"), (Prioridade.P2, "demo")]
 
@@ -145,3 +142,24 @@ def test_chaves_diferentes_nao_se_misturam(banco, pipeline, evento):
     assert c.prioridade is Prioridade.P1  # DoS no servidor de pagamentos
     eventos = ler(banco, lambda s: RepositorioEventos(s).listar())
     assert len(eventos) == 3
+
+
+def test_comprometimento_depois_de_ataque_grave_no_mesmo_ativo_vira_p1(banco, pipeline, evento):
+    """A5: o sudo sozinho é P2 no expediente (em(240) é sexta, 11:00 em Fortaleza); depois de
+    um ataque web P1 no mesmo ativo, o mesmo alerta vira P1: é o passo seguinte do ataque."""
+    sozinho = pipeline.processar_evento(
+        evento(categoria="comprometimento", ip_destino="10.0.1.6", ocorrido_em=em(240))
+    )
+    assert sozinho.prioridade is Prioridade.P2
+
+    pipeline.processar_evento(
+        evento(categoria="ataque_web", ip_destino=PAGAMENTOS, ocorrido_em=em(300))
+    )  # P1 no servidor de pagamentos
+    depois = pipeline.processar_evento(
+        evento(categoria="comprometimento", ip_destino=PAGAMENTOS, ocorrido_em=em(330))
+    )
+    assert depois.prioridade is Prioridade.P1
+    decisao = ler(banco, lambda s: RepositorioDecisoes(s).obter(depois.decisao_id))
+    assert "ataque_previo_no_ativo (só comprometimento): urgência sobe para alta" in (
+        decisao.decisao.rastro.resumo
+    )

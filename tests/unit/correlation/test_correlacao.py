@@ -101,10 +101,10 @@ def test_em_memoria_abre_agrega_e_encerra():
 
 def test_reavaliacao_sobe_com_a_recorrencia_e_nunca_desce(politica_demo, evento):
     motor = Motor(politica_demo)
-    e = evento(categoria="forca_bruta", ip_destino="10.0.1.5")  # P3; com recorrência ≥ 5, P2
+    e = evento(categoria="forca_bruta", ip_destino="10.0.1.5")  # P3; com recorrência ≥ 50, P2
     primeira = reavaliar(motor, e, Contexto(recorrencia_24h=1), None)
     assert (primeira.prioridade, primeira.subiu) == (Prioridade.P3, True)
-    segunda = reavaliar(motor, e, Contexto(recorrencia_24h=5), primeira.prioridade)
+    segunda = reavaliar(motor, e, Contexto(recorrencia_24h=50), primeira.prioridade)
     assert (segunda.prioridade, segunda.subiu) == (Prioridade.P2, True)
     # Mais tarde a recorrência cai abaixo do limiar: o motor diria P3, o incidente fica P2.
     terceira = reavaliar(motor, e, Contexto(recorrencia_24h=2), segunda.prioridade)
@@ -132,8 +132,9 @@ def test_politica_janela_padrao_limites_e_teto_da_recorrencia(politica_demo):
                 | {"modificadores": [{"se": "recorrencia_24h >= 5000", "subir": 1}]}
             }
         )
-    assert ler_politica(base | {"correlacao": {"janela": "2h"}}).correlacao.janela == timedelta(
-        hours=2
+    # 1 h, não 2 h: a janela precisa ficar abaixo do silêncio por origem da demo (2 h).
+    assert ler_politica(base | {"correlacao": {"janela": "1h"}}).correlacao.janela == timedelta(
+        hours=1
     )
 
 

@@ -135,6 +135,7 @@ class IncidenteModel(Base):
         ),
         Index("ix_incidentes_tenant_id_estado_prioridade", "tenant_id", "estado", "prioridade"),
         Index("ix_incidentes_tenant_id_chave_correlacao", "tenant_id", "chave_correlacao"),
+        Index("ix_incidentes_tenant_id_ativo_atualizado_em", "tenant_id", "ativo", "atualizado_em"),
     )
 
     tenant_id: Mapped[str] = _tenant()

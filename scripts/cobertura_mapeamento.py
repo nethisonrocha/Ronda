@@ -175,7 +175,7 @@ def relatorio(cenarios: list[Cenario], assinaturas: dict, acertos: dict) -> str:
     add("# Cobertura do mapeamento do Wazuh no AIT-ADS\n")
     add(
         "Gerado por `scripts/cobertura_mapeamento.py` com o `mapping.yaml` atual "
-        "(taxonomia provisória). Cada alerta passou pelo `AdaptadorWazuh`.\n"
+        "(taxonomia aprovada em 06/10/2026). Cada alerta passou pelo `AdaptadorWazuh`.\n"
     )
     add("- **exata**: regra ou assinatura listada na taxonomia;")
     add("- **genérica**: grupo do Wazuh, família ET ou categoria do Suricata;")

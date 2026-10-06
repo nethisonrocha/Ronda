@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from ronda.domain.event import Evento
 from ronda.domain.incident import Contexto
 from ronda.domain.priority import Criticidade, Impacto, Prioridade, Urgencia
-from ronda.domain.taxonomy import PRIORIDADE_BASE
+from ronda.domain.taxonomy import PRIORIDADE_BASE, Categoria
 from ronda.governance.policy import Ativo, Politica
 from ronda.governance.trace import Rastro, formatar_duracao
 
@@ -77,7 +77,7 @@ class Motor:
         else:
             impacto = linha_impacto[criticidade]
             rastro.registrar("impacto", f"impacto {impacto.value}", criticidade=criticidade.value)
-            urgencia = self._calcular_urgencia(urgencia_base, contexto, rastro)
+            urgencia = self._calcular_urgencia(urgencia_base, contexto, categoria, rastro)
             prioridade = politica.matriz[impacto][urgencia]
 
         resposta = politica.resposta.get(prioridade)
@@ -137,24 +137,26 @@ class Motor:
                 return ativo
         return None
 
-    def _calcular_urgencia(self, base: Urgencia, contexto: Contexto, rastro: Rastro) -> Urgencia:
+    def _calcular_urgencia(
+        self, base: Urgencia, contexto: Contexto, categoria: Categoria, rastro: Rastro
+    ) -> Urgencia:
         urgencia = base
         rastro.registrar("urgencia", f"urgência {urgencia.value}")
         for modificador in self.politica.urgencia.modificadores:
-            if not modificador.aplica(contexto):
+            if not modificador.aplica(contexto, categoria):
                 continue
             nova = urgencia.deslocar(modificador.passos)
             if nova == urgencia:
                 rastro.registrar(
                     "modificador",
-                    f"{modificador.se}: urgência já em {urgencia.value}, sem efeito",
+                    f"{modificador.descricao}: urgência já em {urgencia.value}, sem efeito",
                     condicao=modificador.se,
                 )
                 continue
             verbo = "sobe" if modificador.passos > 0 else "desce"
             rastro.registrar(
                 "modificador",
-                f"{modificador.se}: urgência {verbo} para {nova.value}",
+                f"{modificador.descricao}: urgência {verbo} para {nova.value}",
                 condicao=modificador.se,
                 de=urgencia.value,
                 para=nova.value,

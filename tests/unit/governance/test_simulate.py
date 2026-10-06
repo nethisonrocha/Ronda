@@ -6,9 +6,9 @@ from ronda.governance.simulate import simular
 
 
 def test_simulacao_conta_so_o_que_muda(politica_demo, evento):
-    # Versão 4: ambiente de testes passa a ser tão crítico quanto pagamentos.
+    # Versão nova: ambiente de testes passa a ser tão crítico quanto pagamentos.
     dados = politica_demo.model_dump(mode="json")
-    dados["versao"] = 4
+    dados["versao"] = politica_demo.versao + 1
     for ativo in dados["ativos"]:
         if ativo["nome"] == "ambiente-testes":
             ativo["criticidade"] = "alta"
@@ -22,7 +22,7 @@ def test_simulacao_conta_so_o_que_muda(politica_demo, evento):
     ]
     resultado = simular(itens, politica_demo, nova)
 
-    assert (resultado.versao_atual, resultado.versao_nova) == (3, 4)
+    assert (resultado.versao_atual, resultado.versao_nova) == (4, 5)
     assert resultado.total == 4
     assert resultado.transicoes == {"P3→P1": 2}
     assert [m.evento_id for m in resultado.mudancas] == [itens[0][0].id, itens[1][0].id]

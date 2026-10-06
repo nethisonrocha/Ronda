@@ -1,7 +1,99 @@
 # Avaliação da fase 2 nos 8 cenários do AIT-ADS
 
-Rodada em 25/09/2026 pelo notebook [`notebooks/02_avaliar_fase2.ipynb`](../notebooks/02_avaliar_fase2.ipynb)
-sobre os 2,6 milhões de alertas dos 8 cenários (39,7 dias de laboratório somados).
+Rodada pelo notebook [`notebooks/02_avaliar_fase2.ipynb`](../notebooks/02_avaliar_fase2.ipynb)
+sobre os 2,6 milhões de alertas dos 8 cenários (39,7 dias de laboratório somados). Houve duas
+rodadas:
+
+- **25/09/2026**, com a política de demonstração v3. É a linha de base, nas seções 1 a 7.
+- **06/10/2026**, depois das decisões do dono sobre as pendências (A1–A6, T1–T8), com a política v4.
+  É a seção 0, logo abaixo.
+
+## 0. Depois das decisões do dono (06/10/2026)
+
+O que mudou da v3 para a v4 (detalhes em [pendencias.md](pendencias.md) e [policies.md](policies.md)):
+
+- **Força bruta** só sobe a urgência com 50 falhas em 24 h, e não mais com 5 (A1).
+- **`.biz`** e os outros TLDs suspeitos viram `desconhecido`, e não exfiltração (A2/T4).
+- **O silêncio por origem passou de 30 min para 2 h.** Agora é maior que a janela, e a política
+  recusa o que não for (A3).
+- **O resumo diário conta por categoria**, em vez de listar (A4).
+- **Comprometimento parte de urgência média.** Só vira P1 fora do expediente (08:00–18:00 em
+  Viena, de segunda a sexta) ou com ataque prévio no mesmo ativo (A5).
+- **Taxonomia:**
+  - anomalias de protocolo da varredura de serviços são `reconhecimento` (T2);
+  - `31510` é força bruta (T7);
+  - as 13 assinaturas dos outros seis cenários entraram como exatas, nas mesmas categorias (D3).
+
+| | 25/09 (v3) | 06/10 (v4) |
+| --- | ---: | ---: |
+| Incidentes | 14.797 | 14.701 |
+| Incidentes P1 / P2 | 153 / 257 | **22 / 12** |
+| **Mensagens** | 450 | **79** |
+| Mensagens P1/P2 | 402 (10 por dia) | **31 (0,8 por dia)** |
+| Resumos diários | 48 | 48 |
+| Notificações suprimidas pelo silêncio por origem | 0 | 862 |
+| P1/P2 levados por evento do ataque | 19 | 16 |
+| P1/P2 levados por evento fora de ataque | 378 | **18** |
+| Escalada de privilégio que gerou P1/P2 | 8 de 8 | 8 de 8 |
+| Ataque web (`wpscan` ou `dirb`) que gerou P1/P2 | 8 de 8 | 8 de 8 |
+
+**O ataque continua visto onde as fontes o veem, com 13 vezes menos mensagens urgentes.**
+
+- Dos 18 P1/P2 que sobraram fora de ataque:
+  - 8 são P2 de força bruta no servidor de e-mail, em dias com 50 ou mais falhas de login de
+    usuários em 24 h (o limiar da A1);
+  - 6 são P1 de `sudo` de rotina, todos em fim de semana ou à noite (a regra do expediente
+    agindo como foi desenhada);
+  - 4 são P2 de `sudo` em horário de expediente.
+- O resumo diário conta por categoria, em vez de listar até 229 incidentes cortados no limite do
+  Telegram. O primeiro resumo do wilson ficou assim:
+
+  ```
+  📋 Resumo diário · 03/02/2022
+  23 incidentes P3 desde o último resumo (640 eventos)
+
+  Alerta sem categoria conhecida: 23 incidentes em 21 ativos, 640 eventos
+    mais frequentes: vpn (2), webserver (2), mail (1)
+  ```
+
+| Cenário | Incidentes | P1 | P2 | P3 | P4 | Mensagens | P1/P2 | Resumos | Suprimidas | P1/P2 pela causa | P1/P2 fora de ataque |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| fox | 1.948 | 4 | 5 | 1.349 | 590 | 13 | 7 | 6 | 90 | 2 | 7 |
+| harrison | 1.728 | 2 | 0 | 1.373 | 353 | 8 | 2 | 6 | 100 | 2 | 0 |
+| russellmitchell | 1.267 | 2 | 2 | 950 | 313 | 9 | 4 | 5 | 68 | 2 | 2 |
+| santos | 368 | 3 | 0 | 125 | 240 | 8 | 3 | 5 | 40 | 2 | 1 |
+| shaw | 2.437 | 2 | 0 | 1.839 | 596 | 9 | 2 | 7 | 120 | 2 | 0 |
+| wardbeck | 3.232 | 2 | 2 | 2.691 | 537 | 9 | 3 | 6 | 194 | 2 | 2 |
+| wheeler | 621 | 2 | 1 | 134 | 484 | 9 | 3 | 6 | 55 | 2 | 1 |
+| wilson | 3.100 | 5 | 2 | 2.682 | 411 | 14 | 7 | 7 | 195 | 2 | 5 |
+| **total** | **14.701** | **22** | **12** | **11.143** | **3.524** | **79** | **31** | **48** | **862** | **16** | **18** |
+
+**Cada fase gerou um P1/P2?** É a mesma leitura estrita e a mesma legenda da seção 3.
+
+| Fase | fox | harrison | russellmitchell | santos | shaw | wardbeck | wheeler | wilson |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `network_scans` | ✗ | P3 | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| `service_scans` | P3 | P3 | P3 | P3 | ✗ | P3 | P3 | P3 |
+| `wpscan` | ✅ | ✅ | P3 | ↪ | ✅ | ✅ | ↪ | P3 |
+| `dirb` | ↪ | ↪ | ✅ | ✅ | ↪ | ↪ | ✅ | ✅ |
+| `webshell` |  | P3 | ✗ | ✗ |  | ✗ | ✗ | ✗ |
+| `cracking` | P3 | P3 | ✗ | P3 | ✗ | ✗ |  | ✗ |
+| `reverse_shell` |  | P3 |  | ✗ | ✗ | ✗ | ✗ | ✗ |
+| `privilege_escalation` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `service_stop` |  | P3 |  |  |  |  |  |  |
+| `dnsteal` | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+
+Comparada com a v3, a tabela mostra 16 pares ✅ (eram 18). O que mudou:
+
+- **Os 2 ✅ que saíram são o `wpscan` do wheeler e do wilson.** Na v3, eles viravam P2 pela força
+  bruta (logins do wpscan no WordPress). Com o limiar de 50 (A1), a força bruta fica em P3. O
+  ataque web dos dois cenários continua gerando P1 pelo `dirb`.
+- **O harrison mostra o que a v3 escondia.** Lá, as fases "caíam" no incidente de `.biz`, P1 desde
+  o primeiro evento. Sem ele, aparece a prioridade real de cada fase: P3.
+- **Os ◌ (só na janela) sumiram.** Eram coincidências de força bruta de usuários e `.biz` com a
+  janela das fases.
+
+## Linha de base (25/09/2026, política v3)
 
 **Resumo:**
 

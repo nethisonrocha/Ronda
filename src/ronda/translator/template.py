@@ -189,21 +189,44 @@ def mensagem_agrupada(
     )
 
 
+MAIS_FREQUENTES = 3
+"""Ativos citados por categoria no resumo; o resto entra só na contagem."""
+
+
 def resumo_diario(
     tenant: str, dia: datetime, prioridade: Prioridade, incidentes: list[Incidente]
 ) -> str:
-    por_categoria: dict[Categoria, list[ItemResumo]] = defaultdict(list)
+    """Contagens por categoria, não a lista de incidentes: um dia de laboratório chegou a 229 P3
+    num resumo só, e a lista não cabia na mensagem (decisão A4 do dono, 06/10/2026)."""
+    por_categoria: dict[Categoria, list[Incidente]] = defaultdict(list)
     for incidente in incidentes:
-        por_categoria[incidente.categoria].append(ItemResumo(incidente))
-    grupos = [
-        {"titulo": TITULO[c], "itens": itens}
-        for c, itens in sorted(por_categoria.items(), key=lambda kv: -len(kv[1]))
-    ]
+        por_categoria[incidente.categoria].append(incidente)
+    grupos = []
+    for categoria, do_grupo in sorted(
+        por_categoria.items(), key=lambda kv: (-len(kv[1]), kv[0].value)
+    ):
+        por_ativo: dict[str, list[Incidente]] = defaultdict(list)
+        for incidente in do_grupo:
+            por_ativo[incidente.ativo or "ativo não identificado"].append(incidente)
+        frequentes = sorted(
+            por_ativo.items(),
+            key=lambda kv: (-len(kv[1]), -sum(i.total_eventos for i in kv[1]), kv[0]),
+        )[:MAIS_FREQUENTES]
+        grupos.append(
+            {
+                "titulo": TITULO[categoria],
+                "incidentes": len(do_grupo),
+                "ativos": len(por_ativo),
+                "eventos": sum(i.total_eventos for i in do_grupo),
+                "frequentes": [(ativo, len(lista)) for ativo, lista in frequentes],
+            }
+        )
     return _truncar(
         _ambiente.get_template("resumo.txt.j2").render(
             data=f"{dia:%d/%m/%Y}",
             prioridade=prioridade.value,
-            itens=[i for g in grupos for i in g["itens"]],
+            total=len(incidentes),
+            eventos=sum(i.total_eventos for i in incidentes),
             grupos=grupos,
             tenant=tenant,
         )
