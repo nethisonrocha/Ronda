@@ -9,9 +9,8 @@ O produto é a camada de governança, não o detector: qualquer ferramenta vira 
 de um adaptador ([ADR 0002](docs/adr/0002-governanca-independente-do-detector.md)).
 
 > Origem acadêmica: evolução arquitetural do TCC *"Aplicação de Inteligência Artificial na
-> Governança de Infraestrutura"* (Engenharia de Telecomunicações, UFC, 2026). Especificação em
-> [docs/especificacao.md](docs/especificacao.md) e plano de entregas em
-> [docs/plano-desenvolvimento.md](docs/plano-desenvolvimento.md).
+> Governança de Infraestrutura"* (Engenharia de Telecomunicações, UFC, 2026). Arquitetura em
+> [docs/architecture.md](docs/architecture.md).
 
 ## Resultados medidos (AIT-ADS)
 
@@ -35,7 +34,7 @@ fontes os enxergam.
 | Fase | Entregas | Estado |
 | --- | --- | --- |
 | 1. Núcleo | Esquema de evento, motor determinístico com rastro, política em YAML, testes, API | **concluída** |
-| 2. Alertas | Adaptador Wazuh, ingestão Redis Streams, PostgreSQL + RLS, correlação, Telegram anti-fadiga | **concluída** *(falta rodar na VPS real)* |
+| 2. Alertas | Adaptador Wazuh, ingestão Redis Streams, PostgreSQL + RLS, correlação, Telegram anti-fadiga | **concluída** |
 | 3. Produto visível | Adaptador Suricata (`eve.json`), API `/v1/incidentes` e `/v1/metricas`, Dashboard Next.js, Docker Compose completo, amostras `samples/` | **concluída** |
 | 4. IA | Tradutor com LLM local (Ollama/`llama.cpp`) e detector XGBoost do TCC como fonte | **planejada** |
 | 5. Maturidade | Reteste no CSE-CIC-IDS2018, monitoramento de drift, NOC híbrido, observabilidade, Terraform AWS | **planejada** |
@@ -90,7 +89,7 @@ cd dashboard && npm install && npm run dev    # http://127.0.0.1:3000
 ```
 
 Para testes completos (incluindo os 88 testes de integração com PostgreSQL/RLS) ou replay com
-PostgreSQL + Redis locais (`make up`), consulte [CLAUDE.md](CLAUDE.md#ambiente-local-postgresql-e-redis).
+PostgreSQL + Redis locais (`make up` usando `deploy/compose/dev.yml`), execute `uv run pytest -m integracao`.
 
 ## Estrutura
 

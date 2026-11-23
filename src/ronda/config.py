@@ -57,7 +57,7 @@ class Configuracao(BaseSettings):
     telegram_token: SecretStr | None = Field(
         default=None,
         validation_alias="RONDA_TELEGRAM_TOKEN",
-        description="Token do bot do Ronda (não é o bot do Paperclip)",
+        description="Token do bot do Telegram do Ronda",
     )
     cors_origens: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://127.0.0.1:3000"],

@@ -8,6 +8,23 @@ build/
 *.egg-info/
 
 .env
+.env.*
+!.env.example
+dashboard/.env*
+
+# Caches locais de testes, IDE e assistentes
+.hypothesis/
+*.tsbuildinfo
+.vscode/
+.idea/
+.claude/
+.gemini/
+
+# Documentação interna, notas operacionais e planos locais (fora do repositório público)
+CLAUDE.md
+docs/pendencias.md
+docs/plano-desenvolvimento.md
+docs/especificacao.md
 
 # Datasets ficam fora do git; só o manifesto e as instruções entram.
 # Baixe com: make data (ou make data DATASET=ait-ads).
@@ -19,6 +36,10 @@ data/*
 detector/models/*
 !detector/models/.gitkeep
 
+# Políticas e inventários com ativos reais de produção ficam apenas locais.
+policies/prod/
+policies/*.local.yaml
+
 # Tráfego real nunca entra no repositório; só amostras anonimizadas em samples/.
 *.pcap
 *.pcapng
@@ -27,3 +48,12 @@ detector/models/*
 node_modules/
 .next/
 *.crt
+*.pem
+*.key
+*.p12
+*.pfx
+*.ovpn
+*.sql
+*.dump
+*.bak
+*.log

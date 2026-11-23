@@ -2,7 +2,6 @@
 
 A arquitetura é independente do detector: qualquer ferramenta vira fonte por meio de um
 adaptador, e o valor do projeto está da ingestão para baixo ([ADR 0002](adr/0002-governanca-independente-do-detector.md)).
-Visão completa em [especificacao.md](especificacao.md).
 
 ```
 fontes (Wazuh, Suricata eve.json, detector do TCC*, webhook*)

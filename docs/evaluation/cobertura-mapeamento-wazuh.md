@@ -54,7 +54,7 @@ Alertas com `event_label` diferente de `-` no CSV do AIT-ADS, comparados com a c
 
 ## Mapeadas só pelas regras genéricas (0)
 
-Não estão na taxonomia: a categoria veio de um grupo, da família ET ou da categoria do Suricata. Revisar antes de aprovar a taxonomia (D3 em docs/pendencias.md).
+Não estão na taxonomia: a categoria veio de um grupo, da família ET ou da categoria do Suricata. Revisar antes de aprovar a taxonomia.
 
 Nenhuma.
 

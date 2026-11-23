@@ -22,9 +22,8 @@ Cada tenant tem um arquivo `<tenant>.yaml`, versionado, no diretório definido p
 | `expediente` | não | Horário de trabalho do tenant (`fuso`, `dias`, `inicio`, `fim`); fora dele, o contexto marca `fora_do_horario` |
 
 Categorias válidas: `comprometimento`, `ataque_web`, `negacao_servico`, `forca_bruta`,
-`reconhecimento`, `exfiltracao`, `benigno`, `desconhecido`. A taxonomia foi aprovada pelo dono
-em 06/10/2026; veja [exploracao-ait-ads.md](exploracao-ait-ads.md) e
-[pendencias.md](pendencias.md).
+`reconhecimento`, `exfiltracao`, `benigno`, `desconhecido`. Veja o detalhamento empírico em
+[exploracao-ait-ads.md](exploracao-ait-ads.md).
 
 ## Como o motor decide
 

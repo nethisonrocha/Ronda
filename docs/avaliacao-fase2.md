@@ -10,7 +10,7 @@ rodadas:
 
 ## 0. Depois das decisões do dono (06/10/2026)
 
-O que mudou da v3 para a v4 (detalhes em [pendencias.md](pendencias.md) e [policies.md](policies.md)):
+O que mudou da v3 para a v4 (detalhes da configuração em [policies.md](policies.md)):
 
 - **Força bruta** só sobe a urgência com 50 falhas em 24 h, e não mais com 5 (A1).
 - **`.biz`** e os outros TLDs suspeitos viram `desconhecido`, e não exfiltração (A2/T4).
