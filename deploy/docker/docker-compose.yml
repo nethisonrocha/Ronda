@@ -1,0 +1,127 @@
+# Stack completa do Ronda (infraestrutura + aplicação + dashboard).
+#
+#   docker compose -f deploy/docker/docker-compose.yml --env-file .env up -d --build
+#
+# Subirá PostgreSQL 16, Redis 7, migration Alembic, API FastAPI (:8000),
+# Worker (consumo + correlação + notificações) e Dashboard Next.js (:3000).
+
+name: ronda
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${RONDA_PG_DB:-ronda}
+      POSTGRES_USER: ${RONDA_PG_USER:-ronda}
+      POSTGRES_PASSWORD: ${RONDA_PG_PASSWORD:?defina RONDA_PG_PASSWORD no .env}
+      RONDA_APP_PASSWORD: ${RONDA_APP_PASSWORD:?defina RONDA_APP_PASSWORD no .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../compose/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    mem_limit: 256m
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --requirepass
+      - ${RONDA_REDIS_PASSWORD:?defina RONDA_REDIS_PASSWORD no .env}
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 96mb
+      - --maxmemory-policy
+      - noeviction
+    environment:
+      RONDA_REDIS_PASSWORD: ${RONDA_REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${RONDA_REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    mem_limit: 128m
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      RONDA_DATABASE_MIGRATION_URL: postgresql+psycopg://${RONDA_PG_USER:-ronda}:${RONDA_PG_PASSWORD}@postgres:5432/${RONDA_PG_DB:-ronda}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    environment:
+      RONDA_ENV: ${RONDA_ENV:-producao}
+      RONDA_POLICIES_DIR: policies/examples
+      RONDA_DATABASE_URL: postgresql+psycopg://ronda_app:${RONDA_APP_PASSWORD}@postgres:5432/${RONDA_PG_DB:-ronda}
+      RONDA_DATABASE_MIGRATION_URL: postgresql+psycopg://${RONDA_PG_USER:-ronda}:${RONDA_PG_PASSWORD}@postgres:5432/${RONDA_PG_DB:-ronda}
+      RONDA_REDIS_URL: redis://:${RONDA_REDIS_PASSWORD}@redis:6379/0
+      RONDA_CORS_ORIGINS: ${RONDA_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/saude')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    mem_limit: 256m
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    command: ["ronda", "worker"]
+    environment:
+      RONDA_ENV: ${RONDA_ENV:-producao}
+      RONDA_POLICIES_DIR: policies/examples
+      RONDA_DATABASE_URL: postgresql+psycopg://ronda_app:${RONDA_APP_PASSWORD}@postgres:5432/${RONDA_PG_DB:-ronda}
+      RONDA_REDIS_URL: redis://:${RONDA_REDIS_PASSWORD}@redis:6379/0
+      RONDA_TELEGRAM_TOKEN: ${RONDA_TELEGRAM_TOKEN:-}
+      RONDA_TELEGRAM_CHAT_DEMO: ${RONDA_TELEGRAM_CHAT_DEMO:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    mem_limit: 256m
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.dashboard
+      args:
+        NEXT_PUBLIC_RONDA_API_URL: ${NEXT_PUBLIC_RONDA_API_URL:-http://127.0.0.1:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+    mem_limit: 256m
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
