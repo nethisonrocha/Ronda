@@ -60,6 +60,14 @@ def test_le_o_arquivo_env_e_ignora_variaveis_do_compose(tmp_path, monkeypatch):
     assert Configuracao(_env_file=arquivo).ambiente == "teste"  # ambiente vence o .env
 
 
+def test_le_cors_origens_por_virgula_e_json(monkeypatch):
+    monkeypatch.setenv("RONDA_CORS_ORIGINS", "http://localhost:3000, https://ronda.exemplo.com")
+    assert configurar().cors_origens == ["http://localhost:3000", "https://ronda.exemplo.com"]
+
+    monkeypatch.setenv("RONDA_CORS_ORIGINS", '["http://127.0.0.1:3000"]')
+    assert configurar().cors_origens == ["http://127.0.0.1:3000"]
+
+
 def test_ambiente_desconhecido_e_recusado(monkeypatch):
     monkeypatch.setenv("RONDA_ENV", "staging")
     with pytest.raises(ValidationError):

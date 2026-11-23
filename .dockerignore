@@ -1,0 +1,15 @@
+.git
+.venv
+.pytest_cache
+.ruff_cache
+.hypothesis
+__pycache__
+*.pyc
+data/raw
+data/interim
+data/processed
+dashboard/node_modules
+dashboard/.next
+notebooks
+tests
+docs
