@@ -117,8 +117,8 @@ datasets:
     nome: CIC-IDS2017 corrigido (Engelen et al.)
     uso: [detector]
     pagina: https://intrusion-detection.distrinet-research.be/WTMC2021/
-    # Há versão mais nova (CNS 2022, outros arquivos e outra citação): trocar é decisão do
-    # dono. Os CSV locais são os da WTMC2021 (nomes, tamanhos e CRC32 conferidos no zip).
+    # Versão WTMC2021 confirmada pelo dono em 23/11/2026 (P2).
+    # Os CSV locais são os da WTMC2021 (nomes, tamanhos e CRC32 conferidos no zip).
     versao: "WTMC2021, 24/11/2021"
     licenca: sem licença publicada   # nenhuma página do site fala em licença ou termos
     citacao: >-
@@ -145,9 +145,10 @@ datasets:
     versao: "v3, 2025-02-28"
     licenca: Permitted Re-Use with Commercial Use Restriction   # uso comercial exige acordo
     citacao: >-
-      Luay, Layeghy, Hosseininoorbin, Sarhan, Moustafa e Portmann. Temporal Analysis of
-      NetFlow Datasets for Network Intrusion Detection Systems. arXiv:2503.04404, 2025.
-      Dataset: NF-CSE-CIC-IDS2018-v3, The University of Queensland, DOI 10.48610/ece9b83.
+      Luay, Layeghy, Hosseininoorbin, Sarhan, Moustafa e Portmann. IEEE Access, 2026
+      (preprint: Temporal Analysis of NetFlow Datasets for Network Intrusion Detection
+      Systems, arXiv:2503.04404, 2025). Dataset: NF-CSE-CIC-IDS2018-v3, The University
+      of Queensland, DOI 10.48610/ece9b83.
     # O link oficial (UQ RDM) é uma aplicação web, não um arquivo: o download é manual.
     download: manual
     pasta: netflow-v3/data
@@ -160,12 +161,10 @@ datasets:
           NF-CICIDS2018-v3.csv: 242a6971cc801eae621b1fc4d966db2cd0af9cc866805f36a6fc5d0058dfbb74
           NetFlow_v3_Features.csv: abe3ce6e6ff731d72d76e029b512585c0dbcbd8e03ff6dbe2bd04b560723bd67
 
-  # Qual dataset do BCCC (York University) é este ainda é decisão do dono. O mais provável
-  # é o BCCC-CIC-IDS2017, que a própria página do CIC-IDS2017 indica; os outros candidatos
-  # são BCCC-CSE-CIC-IDS2018, BCCC-cPacket-Cloud-DDoS-2024 e CIC-BCCC-NRC
-  # TabularIoTAttack-2024. Todos pedem formulário e nenhum publica licença.
+  # Dataset escolhido pelo dono em 23/11/2026 (P3): BCCC-CIC-IDS2017.
+  # O download exige formulário na página oficial e não publica licença.
   bccc:
-    nome: BCCC (a definir)
+    nome: BCCC-CIC-IDS2017
     uso: [detector]
     pagina: https://www.yorku.ca/research/bccc/ucs-technical/cybersecurity-datasets-cds/
     versao: null
