@@ -31,6 +31,7 @@ from ronda.domain.incident import (
 )
 from ronda.domain.notification import EstadoNotificacao, Notificacao
 from ronda.domain.priority import Prioridade
+from ronda.domain.taxonomy import Categoria
 from ronda.governance.engine import Decisao
 from ronda.governance.trace import Rastro
 from ronda.storage.database import tenant_da_sessao
@@ -344,7 +345,10 @@ class RepositorioIncidentes(_Repositorio):
         self,
         estado: EstadoIncidente | None = None,
         prioridade: Prioridade | None = None,
+        categoria: Categoria | None = None,
+        ativo: str | None = None,
         limite: int = 100,
+        deslocamento: int = 0,
     ) -> list[Incidente]:
         """Mais graves primeiro; entre iguais, os atualizados mais recentemente."""
         consulta = select(IncidenteModel).where(IncidenteModel.tenant_id == self.tenant)
@@ -352,9 +356,17 @@ class RepositorioIncidentes(_Repositorio):
             consulta = consulta.where(IncidenteModel.estado == estado.value)
         if prioridade is not None:
             consulta = consulta.where(IncidenteModel.prioridade == prioridade.value)
-        consulta = consulta.order_by(
-            IncidenteModel.prioridade.asc().nulls_last(), IncidenteModel.atualizado_em.desc()
-        ).limit(limite)
+        if categoria is not None:
+            consulta = consulta.where(IncidenteModel.categoria == categoria.value)
+        if ativo is not None:
+            consulta = consulta.where(IncidenteModel.ativo == ativo)
+        consulta = (
+            consulta.order_by(
+                IncidenteModel.prioridade.asc().nulls_last(), IncidenteModel.atualizado_em.desc()
+            )
+            .offset(deslocamento)
+            .limit(limite)
+        )
         return [self._para_dominio(linha) for linha in self.sessao.scalars(consulta)]
 
     def _atualizar(self, incidente_id: UUID, valores: dict[str, Any]) -> None:
@@ -749,3 +761,86 @@ class RepositorioTokens(_Repositorio):
             .values(revogado_em=quando)
         )
         return resultado.rowcount == 1
+
+
+# --- métricas ----------------------------------------------------------------------------
+
+
+class ResumoMetricas(BaseModel):
+    total_eventos: int
+    total_incidentes: int
+    incidentes_por_prioridade: dict[str, int]
+    incidentes_por_estado: dict[str, int]
+    notificacoes_por_estado: dict[str, int]
+    taxa_reducao_eventos: float
+    tempo_medio_reconhecimento_s: float | None = None
+
+
+class RepositorioMetricas(_Repositorio):
+    """Agregações operacionais do tenant para o painel executivo."""
+
+    def resumo(self) -> ResumoMetricas:
+        total_eventos = (
+            self.sessao.scalar(
+                select(func.count())
+                .select_from(EventoModel)
+                .where(EventoModel.tenant_id == self.tenant)
+            )
+            or 0
+        )
+
+        por_prioridade = {p.value: 0 for p in Prioridade}
+        for chave, qtd in self.sessao.execute(
+            select(IncidenteModel.prioridade, func.count())
+            .where(IncidenteModel.tenant_id == self.tenant)
+            .group_by(IncidenteModel.prioridade)
+        ):
+            if chave in por_prioridade:
+                por_prioridade[chave] = int(qtd)
+
+        por_estado = {e.value: 0 for e in EstadoIncidente}
+        for chave, qtd in self.sessao.execute(
+            select(IncidenteModel.estado, func.count())
+            .where(IncidenteModel.tenant_id == self.tenant)
+            .group_by(IncidenteModel.estado)
+        ):
+            if chave in por_estado:
+                por_estado[chave] = int(qtd)
+
+        total_incidentes = sum(por_estado.values())
+
+        notificacoes = {e.value: 0 for e in EstadoNotificacao}
+        for chave, qtd in self.sessao.execute(
+            select(NotificacaoModel.estado, func.count())
+            .where(NotificacaoModel.tenant_id == self.tenant)
+            .group_by(NotificacaoModel.estado)
+        ):
+            if chave in notificacoes:
+                notificacoes[chave] = int(qtd)
+
+        media_rec = self.sessao.scalar(
+            select(
+                func.avg(
+                    func.extract("epoch", IncidenteModel.reconhecido_em - IncidenteModel.aberto_em)
+                )
+            ).where(
+                IncidenteModel.tenant_id == self.tenant,
+                IncidenteModel.reconhecido_em.is_not(None),
+            )
+        )
+
+        taxa_reducao = (
+            round(1.0 - (total_incidentes / total_eventos), 4) if total_eventos > 0 else 0.0
+        )
+
+        return ResumoMetricas(
+            total_eventos=int(total_eventos),
+            total_incidentes=int(total_incidentes),
+            incidentes_por_prioridade=por_prioridade,
+            incidentes_por_estado=por_estado,
+            notificacoes_por_estado=notificacoes,
+            taxa_reducao_eventos=taxa_reducao,
+            tempo_medio_reconhecimento_s=round(float(media_rec), 2)
+            if media_rec is not None
+            else None,
+        )

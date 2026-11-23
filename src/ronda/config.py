@@ -58,6 +58,18 @@ class Configuracao(BaseSettings):
         validation_alias="RONDA_TELEGRAM_TOKEN",
         description="Token do bot do Ronda (não é o bot do Paperclip)",
     )
+    cors_origens: list[str] = Field(
+        default_factory=lambda: ["http://localhost:3000", "http://127.0.0.1:3000"],
+        validation_alias="RONDA_CORS_ORIGINS",
+        description="Origens permitidas para CORS no dashboard",
+    )
+
+    @field_validator("cors_origens", mode="before")
+    @classmethod
+    def _parse_cors_origens(cls, valor: object) -> object:
+        if isinstance(valor, str):
+            return [item.strip() for item in valor.split(",") if item.strip()]
+        return valor
 
     @field_validator("telegram_token", mode="before")
     @classmethod
