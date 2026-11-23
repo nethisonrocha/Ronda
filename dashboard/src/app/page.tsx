@@ -787,11 +787,10 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* 2. Grade Principal (3 colunas como na referência) */}
-        <section className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-          {/* Coluna Esquerda: Matriz de Calor ITIL 3x3 clicável */}
-          <div className="space-y-5 lg:col-span-3">
-            <div className={`p-5 ${cardCls}`}>
+        {/* 2. Grade Principal (2 linhas x 3 colunas alinhadas no topo e na base) */}
+        <section className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
+          {/* Linha 1 - Col 1 (3/12): Matriz de Calor ITIL 3x3 clicável */}
+          <div className={`flex h-full flex-col justify-between p-5 lg:col-span-3 ${cardCls}`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h2 className={`text-sm font-bold ${txtTitulo}`}>Matriz de Calor ITIL</h2>
@@ -860,8 +859,8 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Legenda Nível de Prioridade */}
-            <div className={`p-5 ${cardCls}`}>
+            {/* Linha 2 - Col 1 (3/12): Legenda Nível de Prioridade */}
+            <div className={`flex h-full flex-col p-5 lg:col-span-3 lg:row-start-2 ${cardCls}`}>
               <h3 className={`text-xs font-bold uppercase tracking-wide ${txtTitulo}`}>
                 Níveis de Prioridade (SLA)
               </h3>
@@ -920,11 +919,9 @@ export default function DashboardPage() {
                 </li>
               </ul>
             </div>
-          </div>
 
-          {/* Coluna Central: Distribuição (2 Roscas) + Rastro da Decisão ITIL */}
-          <div className="space-y-5 lg:col-span-6">
-            <div className={`p-5 ${cardCls}`}>
+          {/* Linha 1 - Col 2 (6/12): Distribuição dos Incidentes */}
+            <div className={`flex h-full flex-col justify-between p-5 lg:col-span-6 lg:row-start-1 ${cardCls}`}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-sm font-bold ${txtTitulo}`}>
                   Distribuição dos Incidentes
@@ -957,7 +954,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className={`p-5 ${cardCls}`}>
+            <div className={`flex h-full flex-col p-5 lg:col-span-6 lg:row-start-2 ${cardCls}`}>
               <div className="flex items-center justify-between">
                 <h2 className={`text-sm font-bold ${txtTitulo}`}>Rastro da Decisão ITIL</h2>
                 {detalheAtual && (
@@ -1074,11 +1071,9 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Coluna Direita: Principais Ativos + Fila de Incidentes */}
-          <div className="space-y-5 lg:col-span-3">
-            <div className={`p-5 ${cardCls}`}>
+          {/* Linha 1 - Col 3 (3/12): Principais Ativos Afetados */}
+            <div className={`flex h-full flex-col p-5 lg:col-span-3 lg:row-start-1 ${cardCls}`}>
               <div className="flex items-center justify-between">
                 <h2 className={`text-sm font-bold ${txtTitulo}`}>
                   Principais Ativos Afetados
@@ -1113,7 +1108,7 @@ export default function DashboardPage() {
               </ul>
             </div>
 
-            <div className={cardCls}>
+            <div className={`flex h-full flex-col lg:col-span-3 lg:row-start-2 ${cardCls}`}>
               <div className={`space-y-2.5 border-b px-4 py-3.5 ${bordaDiv}`}>
                 <h2 className={`text-sm font-bold ${txtTitulo}`}>
                   Fila de Incidentes ({listaIncidentes.length})
@@ -1154,7 +1149,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className={`divide-y ${escuro ? "divide-slate-800" : "divide-slate-100"}`}>
+              <div className={`max-h-[420px] flex-1 divide-y overflow-y-auto ${escuro ? "divide-slate-800" : "divide-slate-100"}`}>
                 {listaIncidentes.length === 0 ? (
                   <div className={`px-4 py-8 text-center text-xs ${txtSub}`}>
                     Nenhum incidente encontrado.
@@ -1238,7 +1233,6 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-          </div>
         </section>
 
         {/* 3. Simulador de Política (Antes vs. Depois) */}
