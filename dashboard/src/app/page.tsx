@@ -6,12 +6,14 @@ import {
   Bell,
   CheckCircle2,
   GitBranch,
+  Moon,
   Play,
   RefreshCw,
   Search,
   ShieldAlert,
   ShieldCheck,
   Sliders,
+  Sun,
 } from "lucide-react";
 import {
   buscarDetalhe,
@@ -76,11 +78,13 @@ function GraficoRosca({
   centroValor,
   centroSub,
   fatias,
+  escuro = false,
 }: {
   titulo: string;
   centroValor: string;
   centroSub: string;
   fatias: FatiaRosca[];
+  escuro?: boolean;
 }) {
   const total = Math.max(
     1,
@@ -92,7 +96,9 @@ function GraficoRosca({
 
   return (
     <div className="flex flex-col items-center">
-      <p className="mb-3 text-xs font-semibold text-slate-700">{titulo}</p>
+      <p className={`mb-3 text-xs font-semibold ${escuro ? "text-slate-200" : "text-slate-700"}`}>
+        {titulo}
+      </p>
       <div className="flex items-center gap-4">
         <div className="relative h-28 w-28 shrink-0">
           <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
@@ -101,7 +107,7 @@ function GraficoRosca({
               cy="50"
               r={raio}
               fill="transparent"
-              stroke="#E2E8F0"
+              stroke={escuro ? "#1E293B" : "#E2E8F0"}
               strokeWidth="12"
             />
             {fatias.map((f) => {
@@ -126,7 +132,11 @@ function GraficoRosca({
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-sm font-bold tabular-nums text-slate-900">
+            <span
+              className={`text-sm font-bold tabular-nums ${
+                escuro ? "text-white" : "text-slate-900"
+              }`}
+            >
               {centroValor}
             </span>
             <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
@@ -140,14 +150,24 @@ function GraficoRosca({
             const pct = ((f.valor / total) * 100).toFixed(1);
             return (
               <li key={f.rotulo} className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-1.5 text-slate-600">
+                <span
+                  className={`flex items-center gap-1.5 ${
+                    escuro ? "text-slate-300" : "text-slate-600"
+                  }`}
+                >
                   <span
                     className="h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: f.cor }}
                   />
                   {f.rotulo}
                 </span>
-                <span className="font-semibold tabular-nums text-slate-800">{pct}%</span>
+                <span
+                  className={`font-semibold tabular-nums ${
+                    escuro ? "text-slate-100" : "text-slate-800"
+                  }`}
+                >
+                  {pct}%
+                </span>
               </li>
             );
           })}
@@ -172,6 +192,12 @@ export default function DashboardPage() {
   const [detalheApi, setDetalheApi] = useState<DetalheIncidente | null>(null);
 
   const [filtroPrioridade, setFiltroPrioridade] = useState<"TODAS" | Prioridade>("TODAS");
+  const [celulaMatriz, setCelulaMatriz] = useState<{
+    impacto: string;
+    urgencia: string;
+    prioridade: Prioridade;
+  } | null>(null);
+  const [temaEscuro, setTemaEscuro] = useState(false);
   const [busca, setBusca] = useState("");
   const [selecionadoId, setSelecionadoId] = useState<string>(DEMO_DETALHES[0].incidente.id);
   const [replayExecutando, setReplayExecutando] = useState(false);
@@ -443,30 +469,98 @@ export default function DashboardPage() {
   const qtdP3 = metricas.incidentes_por_prioridade.P3 ?? 0;
   const qtdP4 = metricas.incidentes_por_prioridade.P4 ?? 0;
 
+  function selecionarPrioridade(prio: "TODAS" | Prioridade) {
+    setFiltroPrioridade(prio);
+    setCelulaMatriz(null);
+    if (modo === "api" && token.trim()) {
+      void carregarDaApi(apiUrl, token, prio);
+    }
+  }
+
+  function clicarCelulaMatriz(impacto: string, urgencia: string, prioridade: Prioridade) {
+    const mesma =
+      celulaMatriz?.impacto === impacto && celulaMatriz?.urgencia === urgencia;
+    if (mesma) {
+      selecionarPrioridade("TODAS");
+      return;
+    }
+    setCelulaMatriz({ impacto, urgencia, prioridade });
+    setFiltroPrioridade(prioridade);
+    if (modo === "api" && token.trim()) {
+      void carregarDaApi(apiUrl, token, prioridade);
+    }
+  }
+
+  const escuro = temaEscuro;
+  const cardCls = escuro
+    ? "rounded-xl border border-slate-800 bg-[#111827] shadow-sm"
+    : "rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]";
+  const txtTitulo = escuro ? "text-slate-100" : "text-slate-900";
+  const txtSub = escuro ? "text-slate-400" : "text-slate-500";
+  const bordaDiv = escuro ? "border-slate-800" : "border-slate-200";
+  const bordaSuave = escuro ? "border-slate-800/80" : "border-slate-100";
+  const inputCls = escuro
+    ? "rounded-lg border border-slate-700 bg-slate-900 text-slate-100 focus:border-blue-500 focus:outline-none"
+    : "rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-500 focus:outline-none";
+
+  const celulasMatriz: {
+    impacto: string;
+    urgencia: string;
+    prioridade: Prioridade;
+    cor: string;
+    qtd?: number;
+  }[] = [
+    { impacto: "Alto", urgencia: "Baixa", prioridade: "P3", cor: "bg-amber-400 text-slate-950" },
+    { impacto: "Alto", urgencia: "Média", prioridade: "P2", cor: "bg-orange-500 text-white", qtd: qtdP2 },
+    { impacto: "Alto", urgencia: "Alta", prioridade: "P1", cor: "bg-red-600 text-white shadow-sm", qtd: qtdP1 },
+    { impacto: "Médio", urgencia: "Baixa", prioridade: "P4", cor: "bg-emerald-500 text-white" },
+    { impacto: "Médio", urgencia: "Média", prioridade: "P3", cor: "bg-amber-400 text-slate-950", qtd: qtdP3 },
+    { impacto: "Médio", urgencia: "Alta", prioridade: "P2", cor: "bg-orange-500 text-white" },
+    { impacto: "Baixo", urgencia: "Baixa", prioridade: "P4", cor: "bg-emerald-600 text-white", qtd: qtdP4 },
+    { impacto: "Baixo", urgencia: "Média", prioridade: "P4", cor: "bg-emerald-500 text-white" },
+    { impacto: "Baixo", urgencia: "Alta", prioridade: "P3", cor: "bg-amber-400 text-slate-950" },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
+    <div
+      className={`min-h-screen transition-colors ${
+        escuro ? "bg-[#0B1120] text-slate-100" : "bg-[#F8FAFC] text-[#0F172A]"
+      }`}
+    >
       {/* Header corporativo limpo */}
-      <header className="border-b border-slate-200 bg-white">
+      <header className={`border-b ${bordaDiv} ${escuro ? "bg-[#111827]" : "bg-white"}`}>
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0F172A] text-white shadow-sm">
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-xl shadow-sm ${
+                escuro ? "bg-blue-600 text-white" : "bg-[#0F172A] text-white"
+              }`}
+            >
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-slate-900">Ronda</h1>
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                <h1 className={`text-xl font-bold tracking-tight ${txtTitulo}`}>Ronda</h1>
+                <span
+                  className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+                    escuro ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-600"
+                  }`}
+                >
                   ITIL v4
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className={`text-xs ${txtSub}`}>
                 Governança determinística para priorização de alertas em NOC/SOC
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs">
+            <div
+              className={`flex rounded-lg border p-0.5 text-xs ${
+                escuro ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-slate-100"
+              }`}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -475,8 +569,12 @@ export default function DashboardPage() {
                 }}
                 className={`rounded-md px-3 py-1.5 font-medium transition ${
                   modo === "demo"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? escuro
+                      ? "bg-slate-800 text-white shadow-sm"
+                      : "bg-white text-slate-900 shadow-sm"
+                    : escuro
+                      ? "text-slate-400 hover:text-white"
+                      : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 Modo Demo (AIT-ADS)
@@ -489,8 +587,12 @@ export default function DashboardPage() {
                 }}
                 className={`rounded-md px-3 py-1.5 font-medium transition ${
                   modo === "api"
-                    ? "bg-white text-emerald-700 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? escuro
+                      ? "bg-slate-800 text-emerald-400 shadow-sm"
+                      : "bg-white text-emerald-700 shadow-sm"
+                    : escuro
+                      ? "text-slate-400 hover:text-white"
+                      : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 API Conectada
@@ -503,26 +605,44 @@ export default function DashboardPage() {
                   value={apiUrl}
                   onChange={(e) => setApiUrl(e.target.value)}
                   placeholder="http://127.0.0.1:8000"
-                  className="w-44 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
+                  className={`w-44 px-2.5 py-1.5 text-xs ${inputCls}`}
                 />
                 <input
                   type="password"
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   placeholder="Token rnd_..."
-                  className="w-40 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
+                  className={`w-40 px-2.5 py-1.5 text-xs ${inputCls}`}
                 />
                 <button
                   type="button"
                   onClick={() => void carregarDaApi()}
                   disabled={carregando}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
+                    escuro
+                      ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${carregando ? "animate-spin" : ""}`} />
                   Conectar
                 </button>
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => setTemaEscuro((v) => !v)}
+              title={escuro ? "Mudar para modo claro" : "Mudar para modo escuro"}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                escuro
+                  ? "border-slate-700 bg-slate-800 text-amber-300 hover:bg-slate-700"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              {escuro ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+              {escuro ? "Claro" : "Escuro"}
+            </button>
 
             <button
               type="button"
@@ -550,44 +670,60 @@ export default function DashboardPage() {
 
         {/* 1. Linha de 4 Cards KPI (estilo corporativo com ícone pastel à esquerda) */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+          <div className={`flex items-center gap-4 p-4 ${cardCls}`}>
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+                escuro ? "bg-blue-500/15 text-blue-400" : "bg-blue-50 text-blue-600"
+              }`}
+            >
               <Activity className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Eventos Ingeridos</p>
-              <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">
+              <p className={`text-xs font-medium ${txtSub}`}>Eventos Ingeridos</p>
+              <p className={`mt-0.5 text-2xl font-bold tabular-nums ${txtTitulo}`}>
                 {FORMATO_NUM.format(metricas.total_eventos)}
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">Wazuh + Suricata eve.json</p>
+              <p className={`mt-0.5 text-xs ${txtSub}`}>Wazuh + Suricata eve.json</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+          <div className={`flex items-center gap-4 p-4 ${cardCls}`}>
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+                escuro ? "bg-orange-500/15 text-orange-400" : "bg-orange-50 text-orange-600"
+              }`}
+            >
               <GitBranch className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Incidentes Correlacionados</p>
-              <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">
+              <p className={`text-xs font-medium ${txtSub}`}>Incidentes Correlacionados</p>
+              <p className={`mt-0.5 text-2xl font-bold tabular-nums ${txtTitulo}`}>
                 {FORMATO_NUM.format(metricas.total_incidentes)}
               </p>
-              <p className="mt-0.5 text-xs font-medium text-emerald-700">
+              <p
+                className={`mt-0.5 text-xs font-medium ${
+                  escuro ? "text-emerald-400" : "text-emerald-700"
+                }`}
+              >
                 Redução de {(metricas.taxa_reducao_eventos * 100).toFixed(2)}%
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-50 text-purple-600">
+          <div className={`flex items-center gap-4 p-4 ${cardCls}`}>
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+                escuro ? "bg-purple-500/15 text-purple-400" : "bg-purple-50 text-purple-600"
+              }`}
+            >
               <Bell className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Notificações Enviadas</p>
-              <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">
+              <p className={`text-xs font-medium ${txtSub}`}>Notificações Enviadas</p>
+              <p className={`mt-0.5 text-2xl font-bold tabular-nums ${txtTitulo}`}>
                 {FORMATO_NUM.format(metricas.notificacoes_por_estado.enviada ?? 0)}
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className={`mt-0.5 text-xs ${txtSub}`}>
                 {FORMATO_NUM.format(metricas.notificacoes_por_estado.suprimida ?? 0)} suprimidas
                 anti-fadiga
               </p>
@@ -595,29 +731,45 @@ export default function DashboardPage() {
           </div>
 
           <div
-            className={`flex items-center gap-4 rounded-xl border p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] ${
+            className={`flex items-center gap-4 p-4 ${cardCls} ${
               qtdP1 > 0
-                ? "border-red-200 bg-white"
-                : "border-emerald-200 bg-white"
+                ? escuro
+                  ? "!border-red-500/40"
+                  : "!border-red-200"
+                : escuro
+                  ? "!border-emerald-500/40"
+                  : "!border-emerald-200"
             }`}
           >
             <div
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
-                qtdP1 > 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"
+                qtdP1 > 0
+                  ? escuro
+                    ? "bg-red-500/15 text-red-400"
+                    : "bg-red-50 text-red-600"
+                  : escuro
+                    ? "bg-emerald-500/15 text-emerald-400"
+                    : "bg-emerald-50 text-emerald-600"
               }`}
             >
               <ShieldAlert className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-500">Nível de Ação Atual</p>
+              <p className={`text-xs font-medium ${txtSub}`}>Nível de Ação Atual</p>
               <p
                 className={`mt-0.5 text-2xl font-bold ${
-                  qtdP1 > 0 ? "text-red-600" : "text-emerald-700"
+                  qtdP1 > 0
+                    ? escuro
+                      ? "text-red-400"
+                      : "text-red-600"
+                    : escuro
+                      ? "text-emerald-400"
+                      : "text-emerald-700"
                 }`}
               >
                 {qtdP1 > 0 ? "P1 Crítico" : "Normal"}
               </p>
-              <p className="mt-0.5 text-xs font-medium text-slate-600">
+              <p className={`mt-0.5 text-xs font-medium ${txtSub}`}>
                 {FORMATO_NUM.format(qtdP1)} P1 · {FORMATO_NUM.format(qtdP2)} P2 em acompanhamento
               </p>
             </div>
@@ -626,114 +778,132 @@ export default function DashboardPage() {
 
         {/* 2. Grade Principal (3 colunas como na referência) */}
         <section className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-          {/* Coluna Esquerda: Matriz de Calor ITIL 3x3 */}
+          {/* Coluna Esquerda: Matriz de Calor ITIL 3x3 clicável */}
           <div className="space-y-5 lg:col-span-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <h2 className="text-sm font-bold text-slate-900">
-                Matriz de Calor ITIL
-              </h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Impacto × Urgência para priorização determinística
-              </p>
+            <div className={`p-5 ${cardCls}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h2 className={`text-sm font-bold ${txtTitulo}`}>Matriz de Calor ITIL</h2>
+                  <p className={`mt-0.5 text-xs ${txtSub}`}>
+                    Clique em uma célula para filtrar a fila
+                  </p>
+                </div>
+                {celulaMatriz && (
+                  <button
+                    type="button"
+                    onClick={() => selecionarPrioridade("TODAS")}
+                    className="rounded-md bg-blue-600/10 px-2 py-1 text-[11px] font-semibold text-blue-600 hover:bg-blue-600/20"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
 
               <div className="mt-4">
                 <div className="grid grid-cols-4 gap-1.5 text-center text-[11px]">
                   <div />
-                  <div className="font-semibold text-slate-500">Baixa</div>
-                  <div className="font-semibold text-slate-500">Média</div>
-                  <div className="font-semibold text-slate-500">Alta</div>
+                  <div className={`font-semibold ${txtSub}`}>Baixa</div>
+                  <div className={`font-semibold ${txtSub}`}>Média</div>
+                  <div className={`font-semibold ${txtSub}`}>Alta</div>
 
-                  {/* Linha Impacto Alto */}
-                  <div className="flex items-center justify-end pr-1.5 font-semibold text-slate-600">
-                    Alto
-                  </div>
-                  <div className="rounded-md bg-amber-400 px-1 py-2.5 font-bold text-slate-950">
-                    <div className="text-[10px] font-semibold">P3</div>
-                  </div>
-                  <div className="rounded-md bg-orange-500 px-1 py-2.5 font-bold text-white">
-                    <div className="text-[10px] font-semibold">P2</div>
-                    <div className="tabular-nums">{FORMATO_NUM.format(qtdP2)}</div>
-                  </div>
-                  <div className="rounded-md bg-red-600 px-1 py-2.5 font-bold text-white shadow-sm">
-                    <div className="text-[10px] font-semibold">P1</div>
-                    <div className="tabular-nums">{FORMATO_NUM.format(qtdP1)}</div>
-                  </div>
-
-                  {/* Linha Impacto Médio */}
-                  <div className="flex items-center justify-end pr-1.5 font-semibold text-slate-600">
-                    Médio
-                  </div>
-                  <div className="rounded-md bg-emerald-500 px-1 py-2.5 font-bold text-white">
-                    <div className="text-[10px] font-semibold">P4</div>
-                  </div>
-                  <div className="rounded-md bg-amber-400 px-1 py-2.5 font-bold text-slate-950">
-                    <div className="text-[10px] font-semibold">P3</div>
-                    <div className="tabular-nums">{FORMATO_NUM.format(qtdP3)}</div>
-                  </div>
-                  <div className="rounded-md bg-orange-500 px-1 py-2.5 font-bold text-white">
-                    <div className="text-[10px] font-semibold">P2</div>
-                  </div>
-
-                  {/* Linha Impacto Baixo */}
-                  <div className="flex items-center justify-end pr-1.5 font-semibold text-slate-600">
-                    Baixo
-                  </div>
-                  <div className="rounded-md bg-emerald-600 px-1 py-2.5 font-bold text-white">
-                    <div className="text-[10px] font-semibold">P4</div>
-                    <div className="tabular-nums">{FORMATO_NUM.format(qtdP4)}</div>
-                  </div>
-                  <div className="rounded-md bg-emerald-500 px-1 py-2.5 font-bold text-white">
-                    <div className="text-[10px] font-semibold">P4</div>
-                  </div>
-                  <div className="rounded-md bg-amber-400 px-1 py-2.5 font-bold text-slate-950">
-                    <div className="text-[10px] font-semibold">P3</div>
-                  </div>
+                  {(["Alto", "Médio", "Baixo"] as const).map((imp) => (
+                    <div key={imp} className="contents">
+                      <div className={`flex items-center justify-end pr-1.5 font-semibold ${txtSub}`}>
+                        {imp}
+                      </div>
+                      {celulasMatriz
+                        .filter((c) => c.impacto === imp)
+                        .map((c) => {
+                          const ativa =
+                            celulaMatriz?.impacto === c.impacto &&
+                            celulaMatriz?.urgencia === c.urgencia;
+                          return (
+                            <button
+                              key={`${c.impacto}-${c.urgencia}`}
+                              type="button"
+                              onClick={() => clicarCelulaMatriz(c.impacto, c.urgencia, c.prioridade)}
+                              title={`Filtrar ${c.prioridade} (${c.impacto} × ${c.urgencia})`}
+                              className={`cursor-pointer rounded-md px-1 py-2.5 font-bold transition hover:scale-[1.03] ${c.cor} ${
+                                ativa
+                                  ? escuro
+                                    ? "ring-2 ring-white ring-offset-2 ring-offset-[#111827]"
+                                    : "ring-2 ring-slate-900 ring-offset-2 ring-offset-white"
+                                  : "opacity-95 hover:opacity-100"
+                              }`}
+                            >
+                              <div className="text-[10px] font-semibold">{c.prioridade}</div>
+                              {c.qtd !== undefined && (
+                                <div className="tabular-nums">{FORMATO_NUM.format(c.qtd)}</div>
+                              )}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  ))}
                 </div>
-                <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
-                  Eixo Horizontal: Urgência · Eixo Vertical: Impacto
+                <p className={`mt-2.5 text-center text-[11px] font-medium ${txtSub}`}>
+                  {celulaMatriz
+                    ? `Filtro ativo: ${celulaMatriz.impacto} × ${celulaMatriz.urgencia} (${celulaMatriz.prioridade})`
+                    : "Eixo Horizontal: Urgência · Eixo Vertical: Impacto"}
                 </p>
               </div>
             </div>
 
             {/* Legenda Nível de Prioridade */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700">
+            <div className={`p-5 ${cardCls}`}>
+              <h3 className={`text-xs font-bold uppercase tracking-wide ${txtTitulo}`}>
                 Níveis de Prioridade (SLA)
               </h3>
               <ul className="mt-3 space-y-2.5 text-xs">
                 <li className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 font-medium text-slate-700">
+                  <span className={`flex items-center gap-2 font-medium ${txtSub}`}>
                     <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
                     P1 Crítico (Imediato · 15 min)
                   </span>
-                  <span className="font-bold tabular-nums text-red-700">
+                  <span
+                    className={`font-bold tabular-nums ${
+                      escuro ? "text-red-400" : "text-red-700"
+                    }`}
+                  >
                     {FORMATO_NUM.format(qtdP1)}
                   </span>
                 </li>
                 <li className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 font-medium text-slate-700">
+                  <span className={`flex items-center gap-2 font-medium ${txtSub}`}>
                     <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />
                     P2 Alto (Agrupado · 1 h)
                   </span>
-                  <span className="font-bold tabular-nums text-orange-700">
+                  <span
+                    className={`font-bold tabular-nums ${
+                      escuro ? "text-orange-400" : "text-orange-700"
+                    }`}
+                  >
                     {FORMATO_NUM.format(qtdP2)}
                   </span>
                 </li>
                 <li className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 font-medium text-slate-700">
+                  <span className={`flex items-center gap-2 font-medium ${txtSub}`}>
                     <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
                     P3 Médio (Resumo diário · 24 h)
                   </span>
-                  <span className="font-bold tabular-nums text-amber-700">
+                  <span
+                    className={`font-bold tabular-nums ${
+                      escuro ? "text-amber-400" : "text-amber-700"
+                    }`}
+                  >
                     {FORMATO_NUM.format(qtdP3)}
                   </span>
                 </li>
                 <li className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 font-medium text-slate-700">
+                  <span className={`flex items-center gap-2 font-medium ${txtSub}`}>
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
                     P4 Baixo (Apenas painel)
                   </span>
-                  <span className="font-bold tabular-nums text-emerald-700">
+                  <span
+                    className={`font-bold tabular-nums ${
+                      escuro ? "text-emerald-400" : "text-emerald-700"
+                    }`}
+                  >
                     {FORMATO_NUM.format(qtdP4)}
                   </span>
                 </li>
@@ -743,12 +913,16 @@ export default function DashboardPage() {
 
           {/* Coluna Central: Distribuição (2 Roscas) + Fila de Incidentes */}
           <div className="space-y-5 lg:col-span-5">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className={`p-5 ${cardCls}`}>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-900">
+                <h2 className={`text-sm font-bold ${txtTitulo}`}>
                   Distribuição dos Incidentes
                 </h2>
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                <span
+                  className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${
+                    escuro ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-600"
+                  }`}
+                >
                   Base: {FORMATO_NUM.format(metricas.total_incidentes)}
                 </span>
               </div>
@@ -758,19 +932,23 @@ export default function DashboardPage() {
                   centroValor={FORMATO_NUM.format(metricas.total_incidentes)}
                   centroSub="TOTAL"
                   fatias={fatiasPrioridade}
+                  escuro={escuro}
                 />
                 <GraficoRosca
                   titulo="Por Categoria na Fila"
                   centroValor={String(baseIncidentes.length)}
                   centroSub="FILA"
                   fatias={fatiasOrigem}
+                  escuro={escuro}
                 />
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3.5">
-                <h2 className="text-sm font-bold text-slate-900">
+            <div className={cardCls}>
+              <div
+                className={`flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3.5 ${bordaDiv}`}
+              >
+                <h2 className={`text-sm font-bold ${txtTitulo}`}>
                   Fila de Incidentes ({listaIncidentes.length})
                 </h2>
                 <div className="flex flex-wrap items-center gap-1">
@@ -778,16 +956,13 @@ export default function DashboardPage() {
                     <button
                       key={p}
                       type="button"
-                      onClick={() => {
-                        setFiltroPrioridade(p);
-                        if (modo === "api" && token.trim()) {
-                          void carregarDaApi(apiUrl, token, p);
-                        }
-                      }}
+                      onClick={() => selecionarPrioridade(p)}
                       className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                         filtroPrioridade === p
                           ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          : escuro
+                            ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
                       {p}
@@ -796,21 +971,25 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="border-b border-slate-100 px-5 py-2.5">
+              <div className={`border-b px-5 py-2.5 ${bordaSuave}`}>
                 <div className="relative">
                   <Search className="pointer-events-none absolute top-2 left-2.5 h-3.5 w-3.5 text-slate-400" />
                   <input
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
                     placeholder="Filtrar por ativo, categoria ou origem..."
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pr-3 pl-8 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none"
+                    className={`w-full py-1.5 pr-3 pl-8 text-xs ${
+                      escuro
+                        ? "rounded-lg border border-slate-700 bg-slate-900 text-slate-100 focus:border-blue-500 focus:outline-none"
+                        : "rounded-lg border border-slate-200 bg-slate-50 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none"
+                    }`}
                   />
                 </div>
               </div>
 
-              <div className="divide-y divide-slate-100">
+              <div className={`divide-y ${escuro ? "divide-slate-800" : "divide-slate-100"}`}>
                 {listaIncidentes.length === 0 ? (
-                  <div className="px-5 py-10 text-center text-xs text-slate-500">
+                  <div className={`px-5 py-10 text-center text-xs ${txtSub}`}>
                     Nenhum incidente encontrado para o filtro selecionado.
                   </div>
                 ) : (
@@ -823,7 +1002,13 @@ export default function DashboardPage() {
                         key={inc.id}
                         onClick={() => void selecionarIncidente(inc.id)}
                         className={`flex cursor-pointer items-center justify-between gap-3 px-5 py-3 transition ${
-                          selecionado ? "bg-blue-50/70" : "hover:bg-slate-50"
+                          selecionado
+                            ? escuro
+                              ? "bg-blue-500/10"
+                              : "bg-blue-50/70"
+                            : escuro
+                              ? "hover:bg-slate-800/50"
+                              : "hover:bg-slate-50"
                         }`}
                       >
                         <div className="min-w-0 flex-1">
@@ -834,7 +1019,7 @@ export default function DashboardPage() {
                               <span className={`h-1.5 w-1.5 rounded-full ${estilo.ponto}`} />
                               {prio}
                             </span>
-                            <span className="truncate text-sm font-semibold text-slate-900">
+                            <span className={`truncate text-sm font-semibold ${txtTitulo}`}>
                               {inc.categoria}
                             </span>
                             <span
@@ -847,9 +1032,9 @@ export default function DashboardPage() {
                               {inc.origem}
                             </span>
                           </div>
-                          <p className="mt-1 truncate text-xs text-slate-500">
+                          <p className={`mt-1 truncate text-xs ${txtSub}`}>
                             Ativo:{" "}
-                            <span className="font-medium text-slate-700">
+                            <span className={`font-medium ${txtTitulo}`}>
                               {inc.ativo ?? "não identificado"}
                             </span>{" "}
                             · {inc.total_eventos} evento(s) · rec. 24h:{" "}
@@ -870,7 +1055,13 @@ export default function DashboardPage() {
                               Reconhecer
                             </button>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
+                                escuro
+                                  ? "border-slate-700 bg-slate-800 text-slate-300"
+                                  : "border-slate-200 bg-slate-100 text-slate-600"
+                              }`}
+                            >
                               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                               {inc.estado}
                             </span>
@@ -886,29 +1077,33 @@ export default function DashboardPage() {
 
           {/* Coluna Direita: Top Ativos + Rastro Auditável ITIL */}
           <div className="space-y-5 lg:col-span-4">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className={`p-5 ${cardCls}`}>
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-900">
+                <h2 className={`text-sm font-bold ${txtTitulo}`}>
                   Principais Ativos Afetados
                 </h2>
-                <span className="text-xs font-medium text-slate-400">Eventos</span>
+                <span className={`text-xs font-medium ${txtSub}`}>Eventos</span>
               </div>
-              <ul className="mt-3 divide-y divide-slate-100 text-xs">
+              <ul
+                className={`mt-3 divide-y text-xs ${
+                  escuro ? "divide-slate-800" : "divide-slate-100"
+                }`}
+              >
                 {topAtivos.length === 0 ? (
-                  <li className="py-4 text-slate-500">Sem ativos registrados.</li>
+                  <li className={`py-4 ${txtSub}`}>Sem ativos registrados.</li>
                 ) : (
                   topAtivos.map((item) => (
                     <li
                       key={item.ativo}
                       className="flex items-center justify-between py-2.5"
                     >
-                      <span className="flex items-center gap-2 font-medium text-slate-700">
+                      <span className={`flex items-center gap-2 font-medium ${txtSub}`}>
                         <span
                           className={`h-2.5 w-2.5 rounded-full ${ESTILO_PRIO[item.prio].ponto}`}
                         />
                         {item.ativo}
                       </span>
-                      <span className="font-bold tabular-nums text-slate-900">
+                      <span className={`font-bold tabular-nums ${txtTitulo}`}>
                         {FORMATO_NUM.format(item.eventos)}
                       </span>
                     </li>
@@ -917,9 +1112,9 @@ export default function DashboardPage() {
               </ul>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className={`p-5 ${cardCls}`}>
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-900">Rastro da Decisão ITIL</h2>
+                <h2 className={`text-sm font-bold ${txtTitulo}`}>Rastro da Decisão ITIL</h2>
                 {detalheAtual && (
                   <span
                     className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${
@@ -932,13 +1127,19 @@ export default function DashboardPage() {
               </div>
 
               {!detalheAtual ? (
-                <p className="mt-4 text-xs text-slate-500">
+                <p className={`mt-4 text-xs ${txtSub}`}>
                   Selecione um incidente na fila para inspecionar o rastro determinístico.
                 </p>
               ) : (
                 <div className="mt-4 space-y-4">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
-                    <p className="font-semibold text-slate-900">
+                  <div
+                    className={`rounded-lg border p-3 text-xs ${
+                      escuro
+                        ? "border-slate-800 bg-slate-900/70"
+                        : "border-slate-200 bg-slate-50"
+                    }`}
+                  >
+                    <p className={`font-semibold ${txtTitulo}`}>
                       {detalheAtual.incidente.categoria} em{" "}
                       {detalheAtual.incidente.ativo ?? "ativo desconhecido"}
                     </p>
@@ -947,7 +1148,9 @@ export default function DashboardPage() {
                         className={`rounded px-2 py-0.5 font-medium ${
                           detalheAtual.incidente.contexto.fora_do_horario
                             ? "bg-amber-100 text-amber-800"
-                            : "bg-slate-200 text-slate-600"
+                            : escuro
+                              ? "bg-slate-800 text-slate-300"
+                              : "bg-slate-200 text-slate-600"
                         }`}
                       >
                         fora_do_horario:{" "}
@@ -957,7 +1160,9 @@ export default function DashboardPage() {
                         className={`rounded px-2 py-0.5 font-medium ${
                           detalheAtual.incidente.contexto.ataque_previo_no_ativo
                             ? "bg-red-100 text-red-700"
-                            : "bg-slate-200 text-slate-600"
+                            : escuro
+                              ? "bg-slate-800 text-slate-300"
+                              : "bg-slate-200 text-slate-600"
                         }`}
                       >
                         ataque_previo:{" "}
@@ -968,7 +1173,7 @@ export default function DashboardPage() {
 
                   {detalheAtual.decisoes.map((reg) => (
                     <div key={reg.id} className="space-y-2">
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <div className={`flex items-center justify-between text-[11px] ${txtSub}`}>
                         <span className="font-medium">
                           Decisão {reg.decisao.prioridade} · política v
                           {reg.decisao.politica_versao}
@@ -978,14 +1183,20 @@ export default function DashboardPage() {
                       <ol className="space-y-2">
                         {reg.decisao.rastro.passos.map((passo, idx) => (
                           <li key={idx} className="flex items-start gap-2.5 text-xs">
-                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[10px] font-bold text-blue-700">
+                            <span
+                              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                                escuro
+                                  ? "bg-blue-500/20 text-blue-300"
+                                  : "bg-blue-50 text-blue-700"
+                              }`}
+                            >
                               {idx + 1}
                             </span>
                             <div>
-                              <span className="font-semibold text-slate-800">
+                              <span className={`font-semibold ${txtTitulo}`}>
                                 {passo.etapa}:
                               </span>{" "}
-                              <span className="text-slate-600">{passo.texto}</span>
+                              <span className={txtSub}>{passo.texto}</span>
                             </div>
                           </li>
                         ))}
@@ -994,16 +1205,22 @@ export default function DashboardPage() {
                   ))}
 
                   {detalheAtual.eventos.length > 0 && (
-                    <div className="border-t border-slate-100 pt-3">
+                    <div className={`border-t pt-3 ${bordaSuave}`}>
                       <button
                         type="button"
                         onClick={() => setMostrarJson((v) => !v)}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-500"
                       >
                         {mostrarJson ? "Ocultar evidências JSON" : "Ver evidências JSON"}
                       </button>
                       {mostrarJson && (
-                        <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-700">
+                        <pre
+                          className={`mt-2 max-h-40 overflow-auto rounded-lg border p-2.5 text-[11px] ${
+                            escuro
+                              ? "border-slate-800 bg-slate-950 text-slate-300"
+                              : "border-slate-200 bg-slate-50 text-slate-700"
+                          }`}
+                        >
                           {JSON.stringify(detalheAtual.eventos[0].evidencias, null, 2)}
                         </pre>
                       )}
@@ -1016,24 +1233,34 @@ export default function DashboardPage() {
         </section>
 
         {/* 3. Simulador de Política (Antes vs. Depois) */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+        <section className={`p-5 ${cardCls}`}>
+          <div
+            className={`flex flex-wrap items-center justify-between gap-2 border-b pb-4 ${bordaSuave}`}
+          >
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                  escuro ? "bg-blue-500/20 text-blue-400" : "bg-blue-50 text-blue-600"
+                }`}
+              >
                 <Sliders className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-slate-900">
+                <h2 className={`text-sm font-bold ${txtTitulo}`}>
                   Simulador de Política (Antes vs. Depois)
                 </h2>
-                <p className="text-xs text-slate-500">
+                <p className={`text-xs ${txtSub}`}>
                   Recalibre criticidade de ativos e limiares sem alterar a operação em produção
                 </p>
               </div>
             </div>
-            <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+            <span
+              className={`rounded-lg px-3 py-1 text-xs font-medium ${
+                escuro ? "bg-slate-800 text-slate-200" : "bg-slate-100 text-slate-700"
+              }`}
+            >
               Impacta{" "}
-              <strong className="text-orange-700">
+              <strong className={escuro ? "text-orange-400" : "text-orange-700"}>
                 {resultadosSimulacao.filter((r) => r.mudou).length}
               </strong>{" "}
               de {resultadosSimulacao.length} incidente(s) na fila
@@ -1042,7 +1269,7 @@ export default function DashboardPage() {
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
             <label className="space-y-1 text-xs">
-              <span className="font-medium text-slate-600">Criticidade `servidor-pagamentos`</span>
+              <span className={`font-medium ${txtSub}`}>Criticidade `servidor-pagamentos`</span>
               <select
                 value={simulacao.critPagamentos}
                 onChange={(e) =>
@@ -1051,7 +1278,7 @@ export default function DashboardPage() {
                     critPagamentos: e.target.value as Criticidade,
                   }))
                 }
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800"
+                className={`w-full px-3 py-2 text-xs font-medium ${inputCls}`}
               >
                 <option value="alta">alta</option>
                 <option value="media">media</option>
@@ -1060,7 +1287,7 @@ export default function DashboardPage() {
             </label>
 
             <label className="space-y-1 text-xs">
-              <span className="font-medium text-slate-600">Criticidade `servidor-web`</span>
+              <span className={`font-medium ${txtSub}`}>Criticidade `servidor-web`</span>
               <select
                 value={simulacao.critWeb}
                 onChange={(e) =>
@@ -1069,7 +1296,7 @@ export default function DashboardPage() {
                     critWeb: e.target.value as Criticidade,
                   }))
                 }
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800"
+                className={`w-full px-3 py-2 text-xs font-medium ${inputCls}`}
               >
                 <option value="alta">alta</option>
                 <option value="media">media</option>
@@ -1078,7 +1305,7 @@ export default function DashboardPage() {
             </label>
 
             <label className="space-y-1 text-xs">
-              <span className="font-medium text-slate-600">
+              <span className={`font-medium ${txtSub}`}>
                 Limiar força bruta: <strong>{simulacao.limiarForcaBruta}</strong> falhas/24h
               </span>
               <input
@@ -1097,7 +1324,7 @@ export default function DashboardPage() {
               />
             </label>
 
-            <label className="flex items-center gap-2 pt-5 text-xs font-medium text-slate-700">
+            <label className={`flex items-center gap-2 pt-5 text-xs font-medium ${txtSub}`}>
               <input
                 type="checkbox"
                 checked={simulacao.sudoSempreAlto}
@@ -1116,13 +1343,17 @@ export default function DashboardPage() {
                 key={incidente.id}
                 className={`flex items-center justify-between rounded-lg border px-3.5 py-2.5 text-xs ${
                   mudou
-                    ? "border-orange-300 bg-orange-50/70"
-                    : "border-slate-200 bg-slate-50/70"
+                    ? escuro
+                      ? "border-orange-500/40 bg-orange-500/10"
+                      : "border-orange-300 bg-orange-50/70"
+                    : escuro
+                      ? "border-slate-800 bg-slate-900/50"
+                      : "border-slate-200 bg-slate-50/70"
                 }`}
               >
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-slate-800">{incidente.categoria}</p>
-                  <p className="truncate text-[11px] text-slate-500">
+                  <p className={`truncate font-semibold ${txtTitulo}`}>{incidente.categoria}</p>
+                  <p className={`truncate text-[11px] ${txtSub}`}>
                     {incidente.ativo ?? "sem ativo"}
                   </p>
                 </div>
