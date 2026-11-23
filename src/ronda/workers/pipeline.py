@@ -17,6 +17,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from ronda.adapters.suricata import AdaptadorSuricata
 from ronda.adapters.wazuh import AdaptadorWazuh
 from ronda.config import Configuracao
 from ronda.correlation import (
@@ -71,7 +72,10 @@ class Pipeline:
     ) -> None:
         self.banco = banco
         self.politicas = politicas
-        self.adaptadores = adaptadores or {"wazuh": AdaptadorWazuh()}
+        self.adaptadores = adaptadores or {
+            "wazuh": AdaptadorWazuh(),
+            "suricata": AdaptadorSuricata(),
+        }
         self.ao_priorizar = ao_priorizar
         self._marcas: dict[str, datetime] = {}
         """Evento mais recente visto por tenant: o relógio do encerramento por inatividade."""

@@ -26,7 +26,7 @@ class Aceite(BaseModel):
 
 @router.post("/{origem}", status_code=202, response_model=Aceite)
 def ingerir(
-    origem: Literal["wazuh"],
+    origem: Literal["wazuh", "suricata"],
     request: Request,
     tenant: Annotated[str, Depends(tenant_do_token)],
     fila: Annotated[FilaIngestao, Depends(fila_ingestao)],
