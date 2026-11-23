@@ -243,7 +243,7 @@ export default function DashboardPage() {
   const topAtivos = useMemo(() => {
     const mapa = new Map<string, { ativo: string; prio: Prioridade; eventos: number }>();
     const ordem: Record<Prioridade, number> = { P1: 1, P2: 2, P3: 3, P4: 4 };
-    for (const inc of baseIncidentes) {
+    for (const inc of listaIncidentes) {
       const nome = inc.ativo ?? "sem-ativo";
       const prio = inc.prioridade ?? "P3";
       const atual = mapa.get(nome);
@@ -257,18 +257,29 @@ export default function DashboardPage() {
     return Array.from(mapa.values())
       .sort((a, b) => ordem[a.prio] - ordem[b.prio] || b.eventos - a.eventos)
       .slice(0, 6);
-  }, [baseIncidentes]);
+  }, [listaIncidentes]);
 
-  const fatiasPrioridade: FatiaRosca[] = [
-    { rotulo: "P1 Crítico", valor: metricas.incidentes_por_prioridade.P1 ?? 0, cor: "#DC2626" },
-    { rotulo: "P2 Alto", valor: metricas.incidentes_por_prioridade.P2 ?? 0, cor: "#EA580C" },
-    { rotulo: "P3 Médio", valor: metricas.incidentes_por_prioridade.P3 ?? 0, cor: "#EAB308" },
-    { rotulo: "P4 Baixo", valor: metricas.incidentes_por_prioridade.P4 ?? 0, cor: "#16A34A" },
-  ];
+  const fatiasPrioridade: FatiaRosca[] = useMemo(() => {
+    const todas: FatiaRosca[] = [
+      { rotulo: "P1 Crítico", valor: metricas.incidentes_por_prioridade.P1 ?? 0, cor: "#DC2626" },
+      { rotulo: "P2 Alto", valor: metricas.incidentes_por_prioridade.P2 ?? 0, cor: "#EA580C" },
+      { rotulo: "P3 Médio", valor: metricas.incidentes_por_prioridade.P3 ?? 0, cor: "#EAB308" },
+      { rotulo: "P4 Baixo", valor: metricas.incidentes_por_prioridade.P4 ?? 0, cor: "#16A34A" },
+    ];
+    if (filtroPrioridade === "TODAS") return todas;
+    return todas.map((f) =>
+      f.rotulo.startsWith(filtroPrioridade) ? f : { ...f, valor: 0 }
+    );
+  }, [metricas, filtroPrioridade]);
+
+  const totalPrioridadeFiltrada = useMemo(
+    () => fatiasPrioridade.reduce((acc, f) => acc + f.valor, 0),
+    [fatiasPrioridade]
+  );
 
   const fatiasOrigem: FatiaRosca[] = useMemo(() => {
     const porCat = new Map<string, number>();
-    for (const inc of baseIncidentes) {
+    for (const inc of listaIncidentes) {
       porCat.set(inc.categoria, (porCat.get(inc.categoria) ?? 0) + 1);
     }
     const cores = ["#2563EB", "#EA580C", "#16A34A", "#7C3AED", "#64748B"];
@@ -281,7 +292,7 @@ export default function DashboardPage() {
       valor,
       cor: cores[idx % cores.length],
     }));
-  }, [baseIncidentes]);
+  }, [listaIncidentes]);
 
   const resultadosSimulacao = useMemo(() => {
     return baseIncidentes.map((inc) => {
@@ -911,8 +922,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Coluna Central: Distribuição (2 Roscas) + Fila de Incidentes */}
-          <div className="space-y-5 lg:col-span-5">
+          {/* Coluna Central: Distribuição (2 Roscas) + Rastro da Decisão ITIL */}
+          <div className="space-y-5 lg:col-span-6">
             <div className={`p-5 ${cardCls}`}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-sm font-bold ${txtTitulo}`}>
@@ -923,193 +934,27 @@ export default function DashboardPage() {
                     escuro ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-600"
                   }`}
                 >
-                  Base: {FORMATO_NUM.format(metricas.total_incidentes)}
+                  {filtroPrioridade === "TODAS"
+                    ? `Base: ${FORMATO_NUM.format(metricas.total_incidentes)}`
+                    : `Filtro ${filtroPrioridade}: ${FORMATO_NUM.format(totalPrioridadeFiltrada)}`}
                 </span>
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <GraficoRosca
                   titulo="Por Prioridade ITIL"
-                  centroValor={FORMATO_NUM.format(metricas.total_incidentes)}
-                  centroSub="TOTAL"
+                  centroValor={FORMATO_NUM.format(totalPrioridadeFiltrada)}
+                  centroSub={filtroPrioridade === "TODAS" ? "TOTAL" : filtroPrioridade}
                   fatias={fatiasPrioridade}
                   escuro={escuro}
                 />
                 <GraficoRosca
                   titulo="Por Categoria na Fila"
-                  centroValor={String(baseIncidentes.length)}
+                  centroValor={String(listaIncidentes.length)}
                   centroSub="FILA"
                   fatias={fatiasOrigem}
                   escuro={escuro}
                 />
               </div>
-            </div>
-
-            <div className={cardCls}>
-              <div
-                className={`flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3.5 ${bordaDiv}`}
-              >
-                <h2 className={`text-sm font-bold ${txtTitulo}`}>
-                  Fila de Incidentes ({listaIncidentes.length})
-                </h2>
-                <div className="flex flex-wrap items-center gap-1">
-                  {(["TODAS", "P1", "P2", "P3", "P4"] as const).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => selecionarPrioridade(p)}
-                      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
-                        filtroPrioridade === p
-                          ? "bg-blue-600 text-white"
-                          : escuro
-                            ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className={`border-b px-5 py-2.5 ${bordaSuave}`}>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute top-2 left-2.5 h-3.5 w-3.5 text-slate-400" />
-                  <input
-                    value={busca}
-                    onChange={(e) => setBusca(e.target.value)}
-                    placeholder="Filtrar por ativo, categoria ou origem..."
-                    className={`w-full py-1.5 pr-3 pl-8 text-xs ${
-                      escuro
-                        ? "rounded-lg border border-slate-700 bg-slate-900 text-slate-100 focus:border-blue-500 focus:outline-none"
-                        : "rounded-lg border border-slate-200 bg-slate-50 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none"
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className={`divide-y ${escuro ? "divide-slate-800" : "divide-slate-100"}`}>
-                {listaIncidentes.length === 0 ? (
-                  <div className={`px-5 py-10 text-center text-xs ${txtSub}`}>
-                    Nenhum incidente encontrado para o filtro selecionado.
-                  </div>
-                ) : (
-                  listaIncidentes.map((inc) => {
-                    const prio = inc.prioridade ?? "P3";
-                    const estilo = ESTILO_PRIO[prio];
-                    const selecionado = inc.id === detalheAtual?.incidente.id;
-                    return (
-                      <div
-                        key={inc.id}
-                        onClick={() => void selecionarIncidente(inc.id)}
-                        className={`flex cursor-pointer items-center justify-between gap-3 px-5 py-3 transition ${
-                          selecionado
-                            ? escuro
-                              ? "bg-blue-500/10"
-                              : "bg-blue-50/70"
-                            : escuro
-                              ? "hover:bg-slate-800/50"
-                              : "hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-bold ${estilo.badge}`}
-                            >
-                              <span className={`h-1.5 w-1.5 rounded-full ${estilo.ponto}`} />
-                              {prio}
-                            </span>
-                            <span className={`truncate text-sm font-semibold ${txtTitulo}`}>
-                              {inc.categoria}
-                            </span>
-                            <span
-                              className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                                inc.origem === "suricata"
-                                  ? "bg-orange-50 text-orange-700"
-                                  : "bg-blue-50 text-blue-700"
-                              }`}
-                            >
-                              {inc.origem}
-                            </span>
-                          </div>
-                          <p className={`mt-1 truncate text-xs ${txtSub}`}>
-                            Ativo:{" "}
-                            <span className={`font-medium ${txtTitulo}`}>
-                              {inc.ativo ?? "não identificado"}
-                            </span>{" "}
-                            · {inc.total_eventos} evento(s) · rec. 24h:{" "}
-                            {inc.contexto.recorrencia_24h}
-                          </p>
-                        </div>
-
-                        <div className="shrink-0">
-                          {inc.estado === "aberto" ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void reconhecer(inc.id);
-                              }}
-                              className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                            >
-                              Reconhecer
-                            </button>
-                          ) : (
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
-                                escuro
-                                  ? "border-slate-700 bg-slate-800 text-slate-300"
-                                  : "border-slate-200 bg-slate-100 text-slate-600"
-                              }`}
-                            >
-                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                              {inc.estado}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Coluna Direita: Top Ativos + Rastro Auditável ITIL */}
-          <div className="space-y-5 lg:col-span-4">
-            <div className={`p-5 ${cardCls}`}>
-              <div className="flex items-center justify-between">
-                <h2 className={`text-sm font-bold ${txtTitulo}`}>
-                  Principais Ativos Afetados
-                </h2>
-                <span className={`text-xs font-medium ${txtSub}`}>Eventos</span>
-              </div>
-              <ul
-                className={`mt-3 divide-y text-xs ${
-                  escuro ? "divide-slate-800" : "divide-slate-100"
-                }`}
-              >
-                {topAtivos.length === 0 ? (
-                  <li className={`py-4 ${txtSub}`}>Sem ativos registrados.</li>
-                ) : (
-                  topAtivos.map((item) => (
-                    <li
-                      key={item.ativo}
-                      className="flex items-center justify-between py-2.5"
-                    >
-                      <span className={`flex items-center gap-2 font-medium ${txtSub}`}>
-                        <span
-                          className={`h-2.5 w-2.5 rounded-full ${ESTILO_PRIO[item.prio].ponto}`}
-                        />
-                        {item.ativo}
-                      </span>
-                      <span className={`font-bold tabular-nums ${txtTitulo}`}>
-                        {FORMATO_NUM.format(item.eventos)}
-                      </span>
-                    </li>
-                  ))
-                )}
-              </ul>
             </div>
 
             <div className={`p-5 ${cardCls}`}>
@@ -1228,6 +1073,170 @@ export default function DashboardPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Coluna Direita: Principais Ativos + Fila de Incidentes */}
+          <div className="space-y-5 lg:col-span-3">
+            <div className={`p-5 ${cardCls}`}>
+              <div className="flex items-center justify-between">
+                <h2 className={`text-sm font-bold ${txtTitulo}`}>
+                  Principais Ativos Afetados
+                </h2>
+                <span className={`text-xs font-medium ${txtSub}`}>Eventos</span>
+              </div>
+              <ul
+                className={`mt-3 divide-y text-xs ${
+                  escuro ? "divide-slate-800" : "divide-slate-100"
+                }`}
+              >
+                {topAtivos.length === 0 ? (
+                  <li className={`py-4 ${txtSub}`}>Sem ativos registrados.</li>
+                ) : (
+                  topAtivos.map((item) => (
+                    <li
+                      key={item.ativo}
+                      className="flex items-center justify-between py-2.5"
+                    >
+                      <span className={`flex items-center gap-2 font-medium ${txtSub}`}>
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full ${ESTILO_PRIO[item.prio].ponto}`}
+                        />
+                        {item.ativo}
+                      </span>
+                      <span className={`font-bold tabular-nums ${txtTitulo}`}>
+                        {FORMATO_NUM.format(item.eventos)}
+                      </span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+
+            <div className={cardCls}>
+              <div className={`space-y-2.5 border-b px-4 py-3.5 ${bordaDiv}`}>
+                <h2 className={`text-sm font-bold ${txtTitulo}`}>
+                  Fila de Incidentes ({listaIncidentes.length})
+                </h2>
+                <div className="flex flex-wrap items-center gap-1">
+                  {(["TODAS", "P1", "P2", "P3", "P4"] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => selecionarPrioridade(p)}
+                      className={`rounded-md px-2 py-1 text-[11px] font-semibold transition ${
+                        filtroPrioridade === p
+                          ? "bg-blue-600 text-white"
+                          : escuro
+                            ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={`border-b px-4 py-2.5 ${bordaSuave}`}>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute top-2 left-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    placeholder="Filtrar ativo ou categoria..."
+                    className={`w-full py-1.5 pr-3 pl-8 text-xs ${
+                      escuro
+                        ? "rounded-lg border border-slate-700 bg-slate-900 text-slate-100 focus:border-blue-500 focus:outline-none"
+                        : "rounded-lg border border-slate-200 bg-slate-50 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none"
+                    }`}
+                  />
+                </div>
+              </div>
+
+              <div className={`divide-y ${escuro ? "divide-slate-800" : "divide-slate-100"}`}>
+                {listaIncidentes.length === 0 ? (
+                  <div className={`px-4 py-8 text-center text-xs ${txtSub}`}>
+                    Nenhum incidente encontrado.
+                  </div>
+                ) : (
+                  listaIncidentes.map((inc) => {
+                    const prio = inc.prioridade ?? "P3";
+                    const estilo = ESTILO_PRIO[prio];
+                    const selecionado = inc.id === detalheAtual?.incidente.id;
+                    return (
+                      <div
+                        key={inc.id}
+                        onClick={() => void selecionarIncidente(inc.id)}
+                        className={`cursor-pointer space-y-2 px-4 py-3 transition ${
+                          selecionado
+                            ? escuro
+                              ? "bg-blue-500/10"
+                              : "bg-blue-50/70"
+                            : escuro
+                              ? "hover:bg-slate-800/50"
+                              : "hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span
+                              className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${estilo.badge}`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${estilo.ponto}`} />
+                              {prio}
+                            </span>
+                            <span className={`truncate text-xs font-semibold ${txtTitulo}`}>
+                              {inc.categoria}
+                            </span>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                              inc.origem === "suricata"
+                                ? "bg-orange-50 text-orange-700"
+                                : "bg-blue-50 text-blue-700"
+                            }`}
+                          >
+                            {inc.origem}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`truncate text-[11px] ${txtSub}`}>
+                            <span className={`font-medium ${txtTitulo}`}>
+                              {inc.ativo ?? "sem ativo"}
+                            </span>{" "}
+                            · {inc.total_eventos} ev.
+                          </p>
+                          {inc.estado === "aberto" ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void reconhecer(inc.id);
+                              }}
+                              className="shrink-0 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"
+                            >
+                              Reconhecer
+                            </button>
+                          ) : (
+                            <span
+                              className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium ${
+                                escuro
+                                  ? "border-slate-700 bg-slate-800 text-slate-300"
+                                  : "border-slate-200 bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                              {inc.estado}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
         </section>
