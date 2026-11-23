@@ -53,7 +53,7 @@ jurídico; é o que as duas licenças pedem.
 - **JSON e `labels.csv` do Zenodo: CC BY 4.0.** Trechos podem entrar em `samples/`, inclusive
   para uso comercial, com atribuição: autores (Landauer, Skopik, Wurzenberger / AIT), DOI
   10.5281/zenodo.8263181, link para a licença e o que foi alterado (recorte, IPs anonimizados).
-  Os trechos continuam CC BY 4.0 e não mudam a licença Apache-2.0 do código. Ponha a atribuição
+  Os trechos continuam CC BY 4.0 e não mudam a licença MIT do código. Ponha a atribuição
   num `NOTICE` ou num `README` da pasta.
 - **CSV do GitHub do AIT (`alerts_csv`): GPL-3.0.** Um trecho precisaria continuar GPL-3.0, numa
   pasta própria com o `LICENSE` da GPL e o aviso de origem (commit `5459b57`). A leitura usual é

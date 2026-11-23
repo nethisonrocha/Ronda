@@ -3,7 +3,7 @@ name = "ronda"
 version = "0.1.0"
 description = "Governança ITIL para alertas de segurança: prioridade P1–P4 configurável, rastro de decisão e alertas em português."
 readme = "README.md"
-license = "Apache-2.0"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.14",

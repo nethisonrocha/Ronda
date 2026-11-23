@@ -136,4 +136,4 @@ Para testes completos com PostgreSQL/RLS (`make up` via `deploy/compose/dev.yml`
 
 ## Licença
 
-[Apache 2.0](LICENSE). Amostras do AIT-ADS em `samples/` seguem a licença CC BY 4.0 dos autores originais ([samples/README.md](samples/README.md)).
+[MIT](LICENSE). Amostras do AIT-ADS em `samples/` seguem a licença CC BY 4.0 dos autores originais ([samples/README.md](samples/README.md)).
